@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-sand: var(--sand);
+  --color-ocean: var(--ocean);
+  --color-ocean-deep: var(--ocean-deep);
+
+  --font-display: var(--font-display), "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --font-sans: var(--font-sans), "Inter", system-ui, sans-serif;
+
+  --shadow-luxe: 0 30px 60px -25px color-mix(in oklab, var(--ocean-deep) 45%, transparent);
+  --shadow-gold: 0 12px 30px -10px color-mix(in oklab, var(--gold) 50%, transparent);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Luxury coastal palette */
+  --background: oklch(0.99 0.005 80);
+  --foreground: oklch(0.22 0.04 240);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.04 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.04 240);
+
+  /* Deep ocean blue */
+  --primary: oklch(0.32 0.07 235);
+  --primary-foreground: oklch(0.985 0.005 80);
+
+  /* Sandy beige */
+  --secondary: oklch(0.94 0.025 80);
+  --secondary-foreground: oklch(0.3 0.05 240);
+
+  --muted: oklch(0.96 0.015 80);
+  --muted-foreground: oklch(0.5 0.03 240);
+
+  --accent: oklch(0.93 0.04 80);
+  --accent-foreground: oklch(0.3 0.06 240);
+
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.9 0.02 80);
+  --input: oklch(0.9 0.02 80);
+  --ring: oklch(0.78 0.13 85);
+
+  /* Brand tokens */
+  --gold: oklch(0.78 0.13 85);          /* #D4AF37 vibe */
+  --gold-foreground: oklch(0.22 0.04 240);
+  --sand: oklch(0.94 0.03 80);
+  --ocean: oklch(0.45 0.1 235);
+  --ocean-deep: oklch(0.22 0.07 240);
+
+  --gradient-hero: linear-gradient(180deg,
+    color-mix(in oklab, var(--ocean-deep) 35%, transparent) 0%,
+    color-mix(in oklab, var(--ocean-deep) 65%, transparent) 100%);
+  --gradient-gold: linear-gradient(135deg, oklch(0.82 0.13 90), oklch(0.7 0.14 75));
+  --gradient-ocean: linear-gradient(135deg, var(--ocean-deep), var(--ocean));
+}
+
+.dark {
+  --background: oklch(0.18 0.05 240);
+  --foreground: oklch(0.97 0.01 80);
+  --card: oklch(0.22 0.06 240);
+  --card-foreground: oklch(0.97 0.01 80);
+  --popover: oklch(0.22 0.06 240);
+  --popover-foreground: oklch(0.97 0.01 80);
+  --primary: oklch(0.78 0.13 85);
+  --primary-foreground: oklch(0.2 0.05 240);
+  --secondary: oklch(0.28 0.05 240);
+  --secondary-foreground: oklch(0.97 0.01 80);
+  --muted: oklch(0.28 0.05 240);
+  --muted-foreground: oklch(0.7 0.03 80);
+  --accent: oklch(0.32 0.06 240);
+  --accent-foreground: oklch(0.97 0.01 80);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+@utility text-gradient-gold {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-ocean {
+  background: var(--gradient-ocean);
+}
+
+@utility shadow-luxe {
+  box-shadow: var(--shadow-luxe);
+}
+
+@utility shadow-gold {
+  box-shadow: var(--shadow-gold);
+}
