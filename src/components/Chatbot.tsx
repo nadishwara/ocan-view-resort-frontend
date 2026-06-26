@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 type Role = "assistant" | "user";
 type Message = { id: string; role: Role; text: string };
@@ -20,22 +21,35 @@ const QUICK_REPLIES = [
   "Connect to Staff",
 ] as const;
 
-// Mock responder — easy to swap with an API call later.
 async function fetchAssistantReply(userText: string): Promise<string> {
-  // TODO: replace with real API call, e.g.:
-  // const r = await fetch("/api/chat", { method:"POST", body: JSON.stringify({ message: userText }) });
-  // return (await r.json()).reply;
-  const t = userText.toLowerCase();
-  await new Promise((r) => setTimeout(r, 600));
-  if (t.includes("sea") || t.includes("room"))
-    return "Our Deluxe Ocean Rooms start at LKR 38,500 (USD 120) per night with a king bed and a private sea-facing balcony. Would you like me to check availability for your dates?";
-  if (t.includes("lunch") || t.includes("menu") || t.includes("food"))
-    return "Today's lunch highlight is our authentic Sri Lankan Rice & Curry on a banana leaf (LKR 4,200), served at the beachfront Spice Garden from 12:30 to 3:00 PM.";
-  if (t.includes("offer") || t.includes("promotion") || t.includes("deal"))
-    return "Right now you can enjoy 20% off our Honeymoon Package with a complimentary candlelight dinner, or our 7-for-5 long stay deal saving USD 320.";
-  if (t.includes("staff") || t.includes("human") || t.includes("agent"))
-    return "Connecting you with our concierge team — a human host will join this chat within a few minutes. In the meantime, may I note your name and room preference?";
-  return "Lovely question! I'll get the latest details from our concierge desk and share momentarily. Meanwhile, you can explore rooms, dining and offers below.";
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    
+    const response = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: userText }), 
+    });
+
+    if (!response.ok) {
+      if (response.status === 422) {
+        const errData = await response.json();
+        console.error("Validation Error Details from FastAPI:", errData);
+      }
+      throw new Error(`Server response with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Return the response from the API
+    return data.response || data.reply || "I received an empty response from the server.";
+
+  } catch (error) {
+    console.error("Chat API Error:", error);
+    return "I am having trouble processing your request right now. Please try again! 🙏";
+  }
 }
 
 export function Chatbot() {
@@ -57,13 +71,31 @@ export function Chatbot() {
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || pending) return;
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", text: trimmed };
+    
+    const userMsg: Message = { 
+      id: crypto.randomUUID(), 
+      role: "user", 
+      text: trimmed 
+    };
+    
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setPending(true);
+    
     try {
       const reply = await fetchAssistantReply(trimmed);
-      setMessages((m) => [...m, { id: crypto.randomUUID(), role: "assistant", text: reply }]);
+      setMessages((m) => [...m, { 
+        id: crypto.randomUUID(), 
+        role: "assistant", 
+        text: reply 
+      }]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessages((m) => [...m, { 
+        id: crypto.randomUUID(), 
+        role: "assistant", 
+        text: "I'm sorry, I encountered an error. Please try again later. 🙏" 
+      }]);
     } finally {
       setPending(false);
     }
@@ -75,12 +107,14 @@ export function Chatbot() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open chat assistant"
-        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-ocean px-5 py-4 text-primary-foreground shadow-luxe transition hover:scale-105 ${open ? "pointer-events-none opacity-0" : "opacity-100"}`}
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-gradient-ocean px-5 py-4 text-primary-foreground shadow-luxe transition hover:scale-105 ${
+          open ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
       >
         <span className="grid h-7 w-7 place-items-center rounded-full bg-gold/90 text-gold-foreground">
           <Sparkles className="h-3.5 w-3.5" />
         </span>
-        <span className="hidden text-sm font-medium sm:inline">Resort AI Assistant</span>
+        <span className="hidden text-sm font-medium sm:inline">Talk with Agent</span>
         <MessageCircle className="h-5 w-5 sm:hidden" />
       </button>
 
@@ -94,7 +128,9 @@ export function Chatbot() {
 
       {/* Slide-out window */}
       <aside
-        className={`fixed bottom-0 right-0 z-50 flex h-[88svh] w-full flex-col overflow-hidden border border-border bg-card shadow-luxe transition-transform duration-300 sm:bottom-6 sm:right-6 sm:h-[640px] sm:w-[420px] sm:rounded-3xl ${open ? "translate-y-0" : "translate-y-[110%]"}`}
+        className={`fixed bottom-0 right-0 z-50 flex h-[88svh] w-full flex-col overflow-hidden border border-border bg-card shadow-luxe transition-transform duration-300 sm:bottom-6 sm:right-6 sm:h-[640px] sm:w-[420px] sm:rounded-3xl ${
+          open ? "translate-y-0" : "translate-y-[110%]"
+        }`}
         aria-hidden={!open}
       >
         {/* Header */}
@@ -104,7 +140,7 @@ export function Chatbot() {
               <Sparkles className="h-5 w-5 text-gold" />
             </div>
             <div className="leading-tight">
-              <div className="font-display text-lg">Resort AI Assistant</div>
+              <div className="font-display text-lg">Talk with Agent</div>
               <div className="flex items-center gap-2 text-xs text-white/70">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Online · replies instantly
@@ -189,7 +225,13 @@ function Bubble({ role, text }: { role: Role; text: string }) {
             : "rounded-bl-md border border-border bg-card text-foreground"
         }`}
       >
-        {text}
+        {isUser ? (
+          <div className="whitespace-pre-wrap break-words">{text}</div>
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words whitespace-pre-wrap text-foreground prose-p:leading-relaxed prose-li:my-0.5">
+            <ReactMarkdown>{text}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
