@@ -179,7 +179,7 @@ export function Navbar() {
                       handleLinkClick();
                       handleOpenPopup();
                     }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2 text-sm font-medium text-[#141e2a] shadow-lg shadow-[#f7c948]/30"
+                    className="flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2 text-sm font-medium text-[#141e2a] shadow-lg shadow-[#f7c948]/30"
                   >
                     <Calendar className="h-4 w-4" />
                     Book a stay

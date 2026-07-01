@@ -157,7 +157,8 @@ export function Hero() {
               </Field>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-ocean px-6 py-4 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-ocean 
+                px-6 py-4 text-sm font-medium text-primary-foreground transition hover:brightness-110"
               >
                 <BedDouble className="h-4 w-4" />
                 Check availability
