@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SPRING_API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || 'http://localhost:8080';
+const SPRING_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || 'http://localhost:8080';
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         
-        console.log('🔄 Proxying register to:', `${SPRING_API_URL}/api/auth/register`);
+        console.log('🔄 Proxying register to:', `${SPRING_URL}/api/auth/register`);
         
-        const response = await fetch(`${SPRING_API_URL}/api/auth/register`, {
+        const response = await fetch(`${SPRING_URL}/api/auth/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
