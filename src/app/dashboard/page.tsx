@@ -24,18 +24,51 @@ import {
     Bell,
     Settings,
     HelpCircle,
-    ChevronRight,
 } from "lucide-react";
 
+// Types
+type BookingStatus = "confirmed" | "checked-in" | "checked-out" | "cancelled";
+
+interface Booking {
+    id: string;
+    roomNumber: string;
+    roomType: string;
+    checkIn: string;
+    checkOut: string;
+    status: BookingStatus;
+    amount: number;
+    nights: number;
+}
+
+interface UserProfile {
+    name: string;
+    email: string;
+    phone: string;
+    memberSince: string;
+    totalBookings: number;
+    totalSpent: number;
+}
+
+interface RoomSuggestion {
+    id: string;
+    name: string;
+    type: string;
+    price: number;
+    image: string;
+    amenities: string[];
+    rating: number;
+    available: boolean;
+}
+
 // Mock Data
-const MOCK_BOOKINGS = [
+const MOCK_BOOKINGS: Booking[] = [
     {
         id: "1",
         roomNumber: "304",
         roomType: "Deluxe Ocean View",
         checkIn: "2024-12-20",
         checkOut: "2024-12-25",
-        status: "confirmed" as const,
+        status: "confirmed",
         amount: 45000,
         nights: 5,
     },
@@ -45,7 +78,7 @@ const MOCK_BOOKINGS = [
         roomType: "Premium Suite",
         checkIn: "2025-01-15",
         checkOut: "2025-01-18",
-        status: "confirmed" as const,
+        status: "confirmed",
         amount: 75000,
         nights: 3,
     },
@@ -55,13 +88,23 @@ const MOCK_BOOKINGS = [
         roomType: "Standard Room",
         checkIn: "2024-11-10",
         checkOut: "2024-11-12",
-        status: "checked-out" as const,
+        status: "checked-out",
         amount: 28000,
+        nights: 2,
+    },
+    {
+        id: "4",
+        roomNumber: "401",
+        roomType: "Ocean Suite",
+        checkIn: "2024-12-22",
+        checkOut: "2024-12-24",
+        status: "checked-in",
+        amount: 65000,
         nights: 2,
     },
 ];
 
-const MOCK_SUGGESTIONS = [
+const MOCK_SUGGESTIONS: RoomSuggestion[] = [
     {
         id: "1",
         name: "Ocean View Suite",
@@ -94,7 +137,7 @@ const MOCK_SUGGESTIONS = [
     },
 ];
 
-const MOCK_PROFILE = {
+const MOCK_PROFILE: UserProfile = {
     name: "John Doe",
     email: "john.doe@example.com",
     phone: "+94 77 123 4567",
@@ -106,14 +149,15 @@ const MOCK_PROFILE = {
 export default function UserDashboard() {
     const [activeTab, setActiveTab] = useState("overview");
     const [userName] = useState("John Doe");
-    const [bookings] = useState(MOCK_BOOKINGS);
-    const [profile] = useState(MOCK_PROFILE);
-    const [suggestions] = useState(MOCK_SUGGESTIONS);
+    const [bookings] = useState<Booking[]>(MOCK_BOOKINGS);
+    const [profile] = useState<UserProfile>(MOCK_PROFILE);
+    const [suggestions] = useState<RoomSuggestion[]>(MOCK_SUGGESTIONS);
 
+    // Fixed: Include both "confirmed" and "checked-in" as upcoming
     const upcomingBookings = bookings.filter(
         (b) => b.status === "confirmed" || b.status === "checked-in"
     );
-    const pastBookings = bookings.filter((b) => b.status === "checked-out");
+    const pastBookings = bookings.filter((b) => b.status === "checked-out" || b.status === "cancelled");
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -253,8 +297,8 @@ function OverviewTab({
     setActiveTab,
 }: {
     userName: string;
-    profile: typeof MOCK_PROFILE;
-    upcomingBookings: typeof MOCK_BOOKINGS;
+    profile: UserProfile;
+    upcomingBookings: Booking[];
     setActiveTab: (tab: string) => void;
 }) {
     return (
@@ -410,8 +454,8 @@ function QuickActionCard({
 }
 
 // Booking Card
-function BookingCard({ booking }: { booking: typeof MOCK_BOOKINGS[0] }) {
-    const statusColors = {
+function BookingCard({ booking }: { booking: Booking }) {
+    const statusColors: Record<BookingStatus, string> = {
         confirmed:
             "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
         "checked-in":
@@ -461,9 +505,9 @@ function BookingsTab({
     pastBookings,
     allBookings,
 }: {
-    upcomingBookings: typeof MOCK_BOOKINGS;
-    pastBookings: typeof MOCK_BOOKINGS;
-    allBookings: typeof MOCK_BOOKINGS;
+    upcomingBookings: Booking[];
+    pastBookings: Booking[];
+    allBookings: Booking[];
 }) {
     const [showAll, setShowAll] = useState(false);
     const bookings = showAll ? allBookings : upcomingBookings;
@@ -539,7 +583,7 @@ function BookingsTab({
 }
 
 // Rooms Tab
-function RoomsTab({ suggestions }: { suggestions: typeof MOCK_SUGGESTIONS }) {
+function RoomsTab({ suggestions }: { suggestions: RoomSuggestion[] }) {
     return (
         <div>
             <header className="flex items-center justify-between border-b border-gray-200 dark:border-border pb-5">
@@ -568,7 +612,7 @@ function RoomsTab({ suggestions }: { suggestions: typeof MOCK_SUGGESTIONS }) {
 }
 
 // Room Card
-function RoomCard({ room }: { room: typeof MOCK_SUGGESTIONS[0] }) {
+function RoomCard({ room }: { room: RoomSuggestion }) {
     return (
         <div className="rounded-2xl border border-gray-200 dark:border-border bg-white dark:bg-card overflow-hidden shadow-sm hover:shadow-md transition">
             <div className="h-48 bg-gradient-to-br from-gold/20 to-primary/20 flex items-center justify-center">
@@ -618,7 +662,7 @@ function RoomCard({ room }: { room: typeof MOCK_SUGGESTIONS[0] }) {
 }
 
 // Suggestions Tab
-function SuggestionsTab({ suggestions }: { suggestions: typeof MOCK_SUGGESTIONS }) {
+function SuggestionsTab({ suggestions }: { suggestions: RoomSuggestion[] }) {
     return (
         <div>
             <header className="flex items-center justify-between border-b border-gray-200 dark:border-border pb-5">
@@ -647,7 +691,7 @@ function SuggestionsTab({ suggestions }: { suggestions: typeof MOCK_SUGGESTIONS 
 }
 
 // Suggestion Card
-function SuggestionCard({ room }: { room: typeof MOCK_SUGGESTIONS[0] }) {
+function SuggestionCard({ room }: { room: RoomSuggestion }) {
     const getAmenityIcon = (amenity: string) => {
         const iconMap: Record<string, React.ReactNode> = {
             "Wi-Fi": <Wifi className="h-2 w-2" />,
@@ -732,7 +776,7 @@ function ProfileTab({
     profile,
     userName,
 }: {
-    profile: typeof MOCK_PROFILE;
+    profile: UserProfile;
     userName: string;
 }) {
     return (
