@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+// ============ TYPES ============
 interface AuthPopupProps {
     isOpen: boolean;
     onClose: () => void;
@@ -32,11 +33,101 @@ interface DecodedToken {
     iat: number;
 }
 
-interface AuthError {
-    message: string;
+interface AuthError extends Error {
     status?: number;
 }
 
+interface ApiErrorResponse {
+    message?: string;
+    error?: string;
+}
+
+// ============ TOKEN SERVICE ============
+class TokenService {
+    static decode(token: string): DecodedToken | null {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                    .join('')
+            );
+            return JSON.parse(jsonPayload);
+        } catch (error) {
+            console.error("Failed to decode token:", error);
+            return null;
+        }
+    }
+
+    static getUserRole(token: string): string {
+        const decoded = this.decode(token);
+        return decoded?.roles?.[0] || "ROLE_USER";
+    }
+
+    static isAdmin(token: string): boolean {
+        const role = this.getUserRole(token);
+        return role === "ROLE_ADMIN" || role === "ADMIN";
+    }
+}
+
+// ============ AUTH SERVICE ============
+class AuthService {
+    private static async handleResponse(response: Response): Promise<any> {
+        const responseText = await response.text();
+        
+        let data: any;
+        try {
+            data = JSON.parse(responseText);
+        } catch {
+            throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
+        }
+
+        if (!response.ok) {
+            const errorMessage = data.message || data.error || `HTTP ${response.status}`;
+            const error = new Error(errorMessage) as AuthError;
+            error.status = response.status;
+            throw error;
+        }
+
+        return data;
+    }
+
+    static async login(username: string, password: string): Promise<LoginResponse> {
+        const response = await fetch(`/api/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+        });
+
+        const data = await this.handleResponse(response);
+
+        if (!data.token) {
+            throw new Error("Invalid response - no token received");
+        }
+
+        return data;
+    }
+
+    static async register(name: string, username: string, password: string): Promise<LoginResponse> {
+        const response = await fetch(`/api/auth/register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify({ name, username, password }),
+        });
+
+        return await this.handleResponse(response);
+    }
+}
+
+// ============ MAIN COMPONENT ============
 export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState("");
@@ -47,10 +138,7 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
     const router = useRouter();
     const isMounted = useRef(true);
 
-    // Use Next.js API route instead of direct Spring Boot call
-    const API_URL = "/api"; // This will use Next.js API routes
-
-    // Cleanup on unmount
+    // Cleanup
     useEffect(() => {
         return () => {
             isMounted.current = false;
@@ -68,7 +156,7 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
         return () => window.removeEventListener("keydown", handleEsc);
     }, [isOpen, onClose]);
 
-    // Prevent body scroll when popup is open
+    // Prevent body scroll
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
@@ -91,124 +179,25 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
         resetError();
     }, [isLogin, resetError]);
 
-    // Decode JWT token
-    const decodeToken = (token: string): DecodedToken | null => {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (error) {
-            console.error("Failed to decode token:", error);
-            return null;
-        }
-    };
-
-   // Update the handleLogin function to show more specific errors
-const handleLogin = async (username: string, password: string): Promise<LoginResponse> => {
-    console.log("🔄 Attempting login to:", `/api/auth/login`);
-    
-    try {
-        const response = await fetch(`/api/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-            body: JSON.stringify({ username, password }),
-        });
-
-        console.log("📡 Login Response Status:", response.status);
-        console.log("📡 Login Response Headers:", Object.fromEntries(response.headers));
-
-        // Try to get response text first for debugging
-        const responseText = await response.text();
-        console.log("📝 Raw response:", responseText);
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch {
-            console.error("❌ Failed to parse JSON:", responseText);
-            throw new Error(`Invalid response from server: ${responseText.substring(0, 100)}`);
-        }
-
-        if (!response.ok) {
-            const errorMessage = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
-            console.error("❌ Login failed:", errorMessage);
-            const error: AuthError = new Error(errorMessage);
-            error.status = response.status;
-            throw error;
-        }
-
-        if (!data.token) {
-            console.error("❌ No token in response:", data);
-            throw new Error("Invalid response from server - no token received");
-        }
-
-        console.log("✅ Login successful, token received");
-        return data;
+    const handleAuthSuccess = useCallback((token: string) => {
+        const decoded = TokenService.decode(token);
         
-    } catch (error: unknown) {
-        console.error("❌ Login fetch error:", error);
-        // Re-throw with better message
-        if (error instanceof Error) {
-            if (error.message.includes("Failed to fetch")) {
-                throw new Error(`Cannot connect to server. Make sure Next.js is running on port 3000 and backend is running on ${process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || 'http://localhost:8080'}`);
-            }
-            throw error;
+        if (decoded && isMounted.current) {
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify({
+                username: decoded.sub,
+                roles: decoded.roles || []
+            }));
         }
-        throw new Error("Unknown error occurred during login");
-    }
-};
 
-    // Register function using Next.js API route
-    const handleRegister = async (name: string, username: string, password: string): Promise<LoginResponse> => {
-        console.log("🔄 Attempting registration to:", `${API_URL}/auth/register`);
-        
-        try {
-            const response = await fetch(`${API_URL}/auth/register`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                body: JSON.stringify({ name, username, password }),
-            });
-
-            console.log("📡 Register Response Status:", response.status);
-
-            if (!response.ok) {
-                let errorMessage = "Registration failed";
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorData.error || "Registration failed";
-                } catch {
-                    const text = await response.text();
-                    if (text) {
-                        try {
-                            const parsed = JSON.parse(text);
-                            errorMessage = parsed.message || text;
-                        } catch {
-                            errorMessage = text || "Registration failed";
-                        }
-                    }
-                }
-                const error: AuthError = new Error(errorMessage);
-                error.status = response.status;
-                throw error;
-            }
-
-            const data = await response.json();
-            console.log("✅ Registration successful");
-            return data;
-        } catch (error) {
-            console.error("❌ Registration fetch error:", error);
-            throw error;
+        if (isMounted.current) {
+            onClose();
         }
-    };
+
+        // Redirect based on role
+        const isAdmin = TokenService.isAdmin(token);
+        router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
+    }, [onClose, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -218,76 +207,21 @@ const handleLogin = async (username: string, password: string): Promise<LoginRes
         setIsLoading(true);
 
         try {
-            let data: LoginResponse;
-            
             if (isLogin) {
                 // Login flow
-                data = await handleLogin(username, password);
-                
-                // Store token
-                localStorage.setItem("token", data.token);
-                
-                // Decode token to get roles
-                const decoded = decodeToken(data.token);
-                console.log("🔓 Decoded token:", decoded);
-                
-                if (decoded && isMounted.current) {
-                    localStorage.setItem("user", JSON.stringify({
-                        username: decoded.sub,
-                        roles: decoded.roles || []
-                    }));
-                }
-                
-                // Get user role
-                const roles = decoded?.roles || [];
-                const userRole = roles.length > 0 ? roles[0] : "ROLE_USER";
-                console.log("👤 User role:", userRole);
-                
-                // Close popup first
-                if (isMounted.current) {
-                    onClose();
-                }
-                
-                // Redirect based on role
-                if (userRole === "ROLE_ADMIN" || userRole === "ADMIN") {
-                    router.push("/admin/dashboard");
-                } else {
-                    router.push("/dashboard");
-                }
-                
+                const data = await AuthService.login(username, password);
+                handleAuthSuccess(data.token);
             } else {
                 // Register flow
                 try {
-                    data = await handleRegister(name, username, password);
+                    await AuthService.register(name, username, password);
                     
                     // Auto login after registration
-                    const loginData = await handleLogin(username, password);
-                    localStorage.setItem("token", loginData.token);
-                    
-                    const decoded = decodeToken(loginData.token);
-                    if (decoded && isMounted.current) {
-                        localStorage.setItem("user", JSON.stringify({
-                            username: decoded.sub,
-                            roles: decoded.roles || []
-                        }));
-                    }
-                    
-                    const roles = decoded?.roles || [];
-                    const userRole = roles.length > 0 ? roles[0] : "ROLE_USER";
-                    
-                    if (isMounted.current) {
-                        onClose();
-                    }
-                    
-                    if (userRole === "ROLE_ADMIN" || userRole === "ADMIN") {
-                        router.push("/admin/dashboard");
-                    } else {
-                        router.push("/dashboard");
-                    }
-                } catch (registerError: unknown) {
+                    const loginData = await AuthService.login(username, password);
+                    handleAuthSuccess(loginData.token);
+                } catch (registerError) {
                     const err = registerError as AuthError;
-                    // If registration endpoint doesn't exist, show error
-                    if (err.message.includes("404") || err.status === 404) {
+                    if (err.status === 404) {
                         if (isMounted.current) {
                             setError("Registration is not available. Please contact administrator.");
                         }
@@ -296,21 +230,16 @@ const handleLogin = async (username: string, password: string): Promise<LoginRes
                     }
                 }
             }
-            
-        } catch (err: unknown) {
-            console.error("❌ Auth error:", err);
-            
+        } catch (err) {
             const error = err as AuthError;
             let errorMessage = "Something went wrong. Please try again.";
             
-            if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-                errorMessage = "Cannot connect to server. Please check your internet connection and make sure the backend is running.";
-            } else if (error.message.includes("401") || error.message.includes("Unauthorized") || error.status === 401) {
+            if (error.message.includes("Failed to fetch")) {
+                errorMessage = "Cannot connect to server. Please check your internet connection.";
+            } else if (error.status === 401) {
                 errorMessage = "Invalid username or password. Please try again.";
-            } else if (error.message.includes("403") || error.message.includes("Forbidden") || error.status === 403) {
+            } else if (error.status === 403) {
                 errorMessage = "Access denied. Please check your credentials.";
-            } else if (error.message.includes("404") && !isLogin) {
-                errorMessage = "Registration endpoint not found. Please contact administrator.";
             } else {
                 errorMessage = error.message || "Something went wrong. Please try again.";
             }
@@ -326,7 +255,6 @@ const handleLogin = async (username: string, password: string): Promise<LoginRes
     };
 
     const handleGoogleSignUp = () => {
-        // Redirect to Google OAuth endpoint (if configured)
         const SPRING_API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || "http://localhost:8080";
         window.location.href = `${SPRING_API_URL}/oauth2/authorization/google`;
     };

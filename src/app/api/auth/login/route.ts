@@ -1,3 +1,4 @@
+// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -31,7 +32,23 @@ export async function POST(request: NextRequest) {
         }
 
         const data = JSON.parse(text);
-        return NextResponse.json(data, { status: res.status });
+        
+        // ✅ Token එක Cookie එකක් ලෙස Set කරන්න
+        const response = NextResponse.json(data, { status: res.status });
+        
+        if (data.token) {
+            response.cookies.set('auth_token', data.token, {
+                httpOnly: true, // JavaScript මගින් මේක කියවන්න බැරි නිසා ආරක්ෂිතයි
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24 // දින 1ක් සඳහා
+            });
+            
+            console.log("✅ Auth token set in cookie");
+        }
+
+        return response;
 
     } catch (err) {
         console.error("❌ Proxy error:", err);
