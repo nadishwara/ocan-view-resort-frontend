@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BedDouble,
   Plus,
@@ -8,24 +8,23 @@ import {
   Filter,
   Edit,
   Trash2,
-  Eye,
   ChevronLeft,
   ChevronRight,
   X,
-  Check,
   AlertCircle,
-  DollarSign,
-  Home,
   Wifi,
-  Coffee,
   Tv,
   Snowflake,
+  Coffee,
   Bath,
+  Home,
   Car,
   Utensils,
   Smartphone,
   Loader2,
 } from 'lucide-react';
+import axios from 'axios';
+import { toast } from 'sonner';
 
 // Types
 interface Room {
@@ -39,71 +38,88 @@ interface Room {
   description: string;
   floor: number;
   images: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Mock Data
-const MOCK_ROOMS: Room[] = [
-  {
-    id: '1',
-    number: '101',
-    type: 'Standard',
-    status: 'available',
-    price: 25000,
-    capacity: 2,
-    amenities: ['WiFi', 'TV', 'AC'],
-    description: 'Comfortable standard room with city view',
-    floor: 1,
-    images: ['/rooms/standard-1.jpg'],
-  },
-  {
-    id: '2',
-    number: '102',
-    type: 'Standard',
-    status: 'occupied',
-    price: 25000,
-    capacity: 2,
-    amenities: ['WiFi', 'TV', 'AC'],
-    description: 'Standard room with garden view',
-    floor: 1,
-    images: ['/rooms/standard-2.jpg'],
-  },
-  {
-    id: '3',
-    number: '201',
-    type: 'Deluxe',
-    status: 'available',
-    price: 45000,
-    capacity: 3,
-    amenities: ['WiFi', 'TV', 'AC', 'Mini Bar', 'Bathtub'],
-    description: 'Spacious deluxe room with ocean view',
-    floor: 2,
-    images: ['/rooms/deluxe-1.jpg'],
-  },
-  {
-    id: '4',
-    number: '202',
-    type: 'Deluxe',
-    status: 'cleaning',
-    price: 45000,
-    capacity: 3,
-    amenities: ['WiFi', 'TV', 'AC', 'Mini Bar'],
-    description: 'Deluxe room with pool view',
-    floor: 2,
-    images: ['/rooms/deluxe-2.jpg'],
-  },
-  {
-    id: '5',
-    number: '301',
-    type: 'Suite',
-    status: 'maintenance',
-    price: 75000,
-    capacity: 4,
-    amenities: ['WiFi', 'TV', 'AC', 'Mini Bar', 'Bathtub', 'Living Room'],
-    description: 'Luxury suite with panoramic ocean view',
-    floor: 3,
-    images: ['/rooms/suite-1.jpg'],
-  },
-];
+// API Service
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+// Use an axios instance so we can switch base URL without hard-coding host/port
+const api = axios.create({ baseURL: API_BASE_URL });
+
+const getCookie = (name: string) => {
+  if (typeof document === 'undefined') return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+  return null;
+};
+
+// Attach auth token from localStorage (if present)
+api.interceptors.request.use((config) => {
+  try {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token') || getCookie('token') || getCookie('auth_token');
+      if (token) {
+        if (!config.headers) {
+          config.headers = {} as any;
+        }
+        config.headers['Authorization'] = `Bearer ${token}`;
+        if (typeof config.headers.set === 'function') {
+          config.headers.set('Authorization', `Bearer ${token}`);
+        }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return config;
+});
+
+// Server room shape (matches backend model)
+type ServerRoom = {
+  id: number | string;
+  roomNumber: string;
+  roomType: string;
+  price: number;
+  isAvailable?: boolean;
+  capacity?: number;
+  amenities?: string[];
+  imageUrls?: string[];
+  images?: any[];
+};
+
+const mapServerToRoom = (sr: ServerRoom): Room => ({
+  id: String(sr.id),
+  number: sr.roomNumber ?? '',
+  type: (sr.roomType as Room['type']) || 'Standard',
+  status: sr.isAvailable ? 'available' : 'occupied',
+  price: sr.price ?? 0,
+  capacity: sr.capacity ?? 1,
+  amenities: sr.amenities?.map((a: any) => String(a)) || [],
+  description: '',
+  floor: 1,
+  images: (sr.imageUrls || sr.images || []).map((i: any) => String(i)),
+});
+
+const mapRoomToServer = (r: Partial<Room>) => ({
+  roomNumber: r.number,
+  roomType: r.type,
+  price: r.price,
+  isAvailable: r.status === 'available',
+  capacity: r.capacity,
+  amenities: r.amenities ?? [],
+  imageUrls: r.images ?? [],
+});
+
+const roomApi = {
+  getAll: () => api.get<ServerRoom[]>('/rooms'),
+  getById: (id: string) => api.get<ServerRoom>(`/rooms/${id}`),
+  create: (data: Partial<Room>) => api.post('/rooms', mapRoomToServer(data)),
+  update: (id: string, data: Partial<Room>) => api.put(`/rooms/${id}`, mapRoomToServer(data)),
+  delete: (id: string) => api.delete(`/rooms/${id}`),
+};
 
 const amenityIcons: Record<string, React.ReactNode> = {
   WiFi: <Wifi className="h-3 w-3" />,
@@ -118,7 +134,8 @@ const amenityIcons: Record<string, React.ReactNode> = {
 };
 
 export default function Rooms() {
-  const [rooms, setRooms] = useState<Room[]>(MOCK_ROOMS);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,6 +143,7 @@ export default function Rooms() {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const itemsPerPage = 5;
 
   // Form State
@@ -139,6 +157,31 @@ export default function Rooms() {
     description: '',
     floor: 1,
   });
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      const response = await roomApi.getAll();
+      const apiRooms = Array.isArray(response.data) ? response.data : [];
+      setRooms(apiRooms.map(mapServerToRoom));
+    } catch (error: any) {
+      console.error('Error fetching rooms:', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message || 'Unknown error';
+      toast.error(`Failed to load rooms: ${errMsg}`);
+      setRooms([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch rooms on component mount
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void fetchRooms();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   // Filter rooms
   const filteredRooms = rooms.filter(room => {
@@ -182,35 +225,53 @@ export default function Rooms() {
     setIsDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (roomToDelete) {
-      setRooms(rooms.filter(r => r.id !== roomToDelete.id));
+  const confirmDelete = async () => {
+    if (!roomToDelete) return;
+
+    try {
+      setIsSubmitting(true);
+      await roomApi.delete(roomToDelete.id);
+      setRooms(prev => prev.filter(r => r.id !== roomToDelete.id));
+      toast.success(`Room ${roomToDelete.number} deleted successfully`);
       setIsDeleteModalOpen(false);
       setRoomToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting room:', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message || 'Unknown error';
+      toast.error(`Failed to delete room: ${errMsg}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (editingRoom) {
-      // Update
-      setRooms(rooms.map(r => 
-        r.id === editingRoom.id ? { ...r, ...formData } as Room : r
-      ));
-    } else {
-      // Create
-      const newRoom: Room = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...formData as Omit<Room, 'id'>,
-        images: [],
-      };
-      setRooms([...rooms, newRoom]);
+
+    try {
+      setIsSubmitting(true);
+
+      if (editingRoom) {
+        const response = await roomApi.update(editingRoom.id, formData);
+        const updated = response.data ? mapServerToRoom(response.data as ServerRoom) : { ...editingRoom, ...formData } as Room;
+        setRooms(prev => prev.map(r => (r.id === editingRoom.id ? updated : r)));
+        toast.success(`Room ${updated.number} updated successfully`);
+      } else {
+        const response = await roomApi.create(formData);
+        const created = response.data ? mapServerToRoom(response.data as ServerRoom) : (formData as Room);
+        setRooms(prev => [...prev, created]);
+        toast.success(`Room ${created.number} added successfully`);
+      }
+
+      setIsModalOpen(false);
+      setEditingRoom(null);
+      setFormData({});
+    } catch (error: any) {
+      console.error('Error saving room:', error);
+      const errMsg = error.response?.data?.message || error.response?.data || error.message || 'Unknown error';
+      toast.error(`Failed to save room: ${errMsg}`);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    setIsModalOpen(false);
-    setEditingRoom(null);
-    setFormData({});
   };
 
   const getStatusColor = (status: string) => {
@@ -241,6 +302,18 @@ export default function Rooms() {
         : [...(prev.amenities || []), amenity],
     }));
   };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
+          <p className="text-gray-600 dark:text-muted-foreground">Loading rooms...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -355,7 +428,7 @@ export default function Rooms() {
                             Room {room.number}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-muted-foreground">
-                            ID: {room.id}
+                            ID: {room.id.slice(0, 8)}
                           </p>
                         </div>
                       </div>
@@ -606,13 +679,16 @@ export default function Rooms() {
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-secondary rounded-lg transition"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium bg-gold text-white rounded-lg hover:bg-gold/90 transition shadow-sm"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium bg-gold text-white rounded-lg hover:bg-gold/90 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingRoom ? 'Update Room' : 'Add Room'}
                 </button>
               </div>
@@ -639,13 +715,16 @@ export default function Rooms() {
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-secondary rounded-lg transition"
+                disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-sm"
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 Delete Room
               </button>
             </div>
