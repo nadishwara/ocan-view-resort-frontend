@@ -76,7 +76,7 @@
   /* Brand tokens */
   --gold: oklch(0.78 0.13 85);          /* #D4AF37 vibe */
   --gold-foreground: oklch(0.22 0.04 240);
-  --sand: oklch(0.94 0.03 80);
+  --sand: oklch(0.94 0.03 80);  
   --ocean: oklch(0.45 0.1 235);
   --ocean-deep: oklch(0.22 0.07 240);
 

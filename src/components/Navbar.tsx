@@ -6,8 +6,8 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import AuthPopup from "./auth/AuthPopup";
 
 const links = [
-  { href: "#home", label: "Home" },
-  { href: "#rooms", label: "Rooms & Services" },
+  { href: "/", label: "Home" },
+  { href: "/rooms", label: "Rooms & Services" },
   { href: "#offers", label: "Offers" },
   { href: "#contact", label: "Contact" },
 ];

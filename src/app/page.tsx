@@ -16,7 +16,7 @@ export default function Home() {
       <Toaster position="bottom-left" closeButton richColors />
 
       {/* Global Navigation Bar */}
-      <Navbar />
+      {/* <Navbar /> */}
 
       {/* Main Page Layout */}
       <main className="flex-grow">
@@ -34,10 +34,10 @@ export default function Home() {
       </main>
 
       {/* Footer Section */}
-      <Footer />
+      {/* <Footer /> */}
 
       {/* Floating Concierge AI Chatbot */}
-      <Chatbot />
+      {/* <Chatbot /> */}
     </div>
   );
 }
