@@ -24,13 +24,19 @@ interface AuthPopupProps {
 
 interface LoginResponse {
     token: string;
+    roles?: string[];
+    role?: string;
+    isAdmin?: boolean;
 }
 
 interface DecodedToken {
     sub: string;
-    roles: string[];
+    roles?: string[] | string;
+    authorities?: Array<string | { authority?: string }>;
+    role?: string | string[];
     exp: number;
     iat: number;
+    [key: string]: any;
 }
 
 interface AuthError extends Error {
@@ -61,14 +67,40 @@ class TokenService {
         }
     }
 
-    static getUserRole(token: string): string {
+    static normalizeRoleValue(role: unknown): string[] {
+        if (!role) return [];
+        if (Array.isArray(role)) {
+            return role.flatMap((item) => {
+                if (typeof item === 'string') return item;
+                if (typeof item === 'object' && item && 'authority' in item) {
+                    return String((item as any).authority);
+                }
+                return [] as string[];
+            });
+        }
+
+        if (typeof role === 'string') {
+            return [role];
+        }
+
+        if (typeof role === 'object' && role) {
+            return Object.values(role).filter((value): value is string => typeof value === 'string');
+        }
+
+        return [];
+    }
+
+    static getRolesFromToken(token: string): string[] {
         const decoded = this.decode(token);
-        return decoded?.roles?.[0] || "ROLE_USER";
+        if (!decoded) return [];
+
+        const rawRoles = decoded.roles ?? decoded.authorities ?? decoded.role;
+        return this.normalizeRoleValue(rawRoles).map((role) => role.toString().toUpperCase());
     }
 
     static isAdmin(token: string): boolean {
-        const role = this.getUserRole(token);
-        return role === "ROLE_ADMIN" || role === "ADMIN";
+        const roles = this.getRolesFromToken(token);
+        return roles.some((role) => role === 'ROLE_ADMIN' || role === 'ADMIN' || role.endsWith('_ADMIN'));
     }
 }
 
@@ -113,14 +145,14 @@ class AuthService {
         return data;
     }
 
-    static async register(name: string, username: string, password: string): Promise<LoginResponse> {
+    static async register(name: string, username: string, password: string, role: "ADMIN" | "USER" = "USER"): Promise<LoginResponse> {
         const response = await fetch(`/api/auth/register`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },
-            body: JSON.stringify({ name, username, password }),
+            body: JSON.stringify({ name, username, password, role }),
         });
 
         return await this.handleResponse(response);
@@ -133,6 +165,7 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
+    const [isAdminRegistration, setIsAdminRegistration] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -179,14 +212,20 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
         resetError();
     }, [isLogin, resetError]);
 
-    const handleAuthSuccess = useCallback((token: string) => {
+    const handleAuthSuccess = useCallback((token: string, loginData?: LoginResponse) => {
         const decoded = TokenService.decode(token);
-        
+        const isAdminFromResponse = loginData?.isAdmin === true ||
+            TokenService.normalizeRoleValue(loginData?.roles ?? loginData?.role).some((role) =>
+                ['ROLE_ADMIN', 'ADMIN'].includes(role.toUpperCase())
+            );
+        const isAdminFromToken = TokenService.isAdmin(token);
+        const isAdmin = isAdminFromResponse || isAdminFromToken;
+
         if (decoded && isMounted.current) {
             localStorage.setItem("token", token);
             localStorage.setItem("user", JSON.stringify({
                 username: decoded.sub,
-                roles: decoded.roles || []
+                roles: TokenService.getRolesFromToken(token)
             }));
         }
 
@@ -195,8 +234,7 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
         }
 
         // Redirect based on role
-        const isAdmin = TokenService.isAdmin(token);
-        router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
+        router.replace(isAdmin ? "/admin/dashboard" : "/dashboard");
     }, [onClose, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -210,15 +248,16 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
             if (isLogin) {
                 // Login flow
                 const data = await AuthService.login(username, password);
-                handleAuthSuccess(data.token);
+                handleAuthSuccess(data.token, data);
             } else {
                 // Register flow
                 try {
-                    await AuthService.register(name, username, password);
+                    const registrationRole = isAdminRegistration ? "ADMIN" : "USER";
+                    await AuthService.register(name, username, password, registrationRole);
                     
                     // Auto login after registration
                     const loginData = await AuthService.login(username, password);
-                    handleAuthSuccess(loginData.token);
+                    handleAuthSuccess(loginData.token, loginData);
                 } catch (registerError) {
                     const err = registerError as AuthError;
                     if (err.status === 404) {
@@ -295,7 +334,7 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
                 {/* Error Message */}
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-red-700 text-sm">
-                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                         <span>{error}</span>
                     </div>
                 )}
@@ -388,6 +427,19 @@ export default function AuthPopup({ isOpen, onClose, onOpen }: AuthPopupProps) {
                             />
                         </div>
                     </div>
+
+                    {!isLogin && (
+                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                            <input
+                                type="checkbox"
+                                checked={isAdminRegistration}
+                                onChange={(e) => setIsAdminRegistration(e.target.checked)}
+                                disabled={isLoading}
+                                className="h-4 w-4 rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]"
+                            />
+                            <span>Register as admin</span>
+                        </label>
+                    )}
 
                     {/* Submit Button */}
                     <button

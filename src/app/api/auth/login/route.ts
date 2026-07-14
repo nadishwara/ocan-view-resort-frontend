@@ -37,15 +37,18 @@ export async function POST(request: NextRequest) {
         const response = NextResponse.json(data, { status: res.status });
         
         if (data.token) {
-            response.cookies.set('auth_token', data.token, {
-                httpOnly: true, // JavaScript මගින් මේක කියවන්න බැරි නිසා ආරක්ෂිතයි
+            const cookieOptions = {
+                httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                sameSite: 'lax' as const,
                 path: '/',
-                maxAge: 60 * 60 * 24 // දින 1ක් සඳහා
-            });
+                maxAge: 60 * 60 * 24,
+            };
+
+            response.cookies.set('auth_token', data.token, cookieOptions);
+            response.cookies.set('token', data.token, cookieOptions);
             
-            console.log("✅ Auth token set in cookie");
+            console.log("✅ Auth token set in cookies");
         }
 
         return response;
