@@ -10,6 +10,7 @@ interface RegisterData {
     name: string;
     email: string;
     password: string;
+    role?: "ADMIN" | "USER";
 }
 
 export async function loginUser(email: string, password: string): Promise<LoginResponse> {
@@ -29,13 +30,13 @@ export async function loginUser(email: string, password: string): Promise<LoginR
     return response.json();
 }
 
-export async function registerUser(name: string, email: string, password: string): Promise<LoginResponse> {
+export async function registerUser(name: string, email: string, password: string, role: "ADMIN" | "USER" = "USER"): Promise<LoginResponse> {
     const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, role }),
     });
 
     if (!response.ok) {
