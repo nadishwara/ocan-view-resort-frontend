@@ -6,13 +6,12 @@ import {
     BedDouble,
     Users,
     LogOut,
-    ShieldAlert,
     Calendar,
     Bell,
     Settings,
     HelpCircle,
-    ChevronLeft,
-    ChevronRight,
+    Menu,
+    X,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -31,27 +30,35 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
     return (
         <aside
-            className={`h-full border-r border-gray-200 dark:border-border bg-white dark:bg-card p-5 flex flex-col justify-between shrink-0 transition-all duration-300 ${
+            className={`h-full border-r border-gray-200 dark:border-border bg-white dark:bg-card p-5 flex flex-col justify-between shrink-0 transition-all duration-300 relative ${
                 isCollapsed ? "w-20" : "w-64"
             }`}
         >
-            {/* Toggle Button */}
-            <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute -right-3 top-8 z-10 rounded-full border border-gray-200 dark:border-border bg-white dark:bg-card p-1.5 shadow-md hover:bg-gray-100 dark:hover:bg-secondary transition"
-            >
-                {isCollapsed ? (
-                    <ChevronRight className="h-4 w-4 text-gray-600 dark:text-muted-foreground" />
-                ) : (
-                    <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-muted-foreground" />
-                )}
-            </button>
-
             <div className="space-y-6">
-                {/* Logo */}
-                <div className={`flex items-center gap-2 font-display text-xl font-bold text-primary ${isCollapsed ? "justify-center" : ""}`}>
-                    <ShieldAlert className="text-gold shrink-0" />
-                    {!isCollapsed && <span>OceanView Admin</span>}
+                {/* Header Section: Logo & Animated Menu Toggle Icon */}
+                <div className={`flex items-center gap-3 font-display text-xl font-bold text-primary ${isCollapsed ? "justify-center" : "justify-between"}`}>
+                    
+                    {/* Collapsed/Expanded Animation සහිත Hamburger Menu Icon එක */}
+                    <button
+                        onClick={() => setIsCollapsed(!isCollapsed)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary text-gold transition-transform duration-300 ease-in-out transform active:scale-95 shrink-0 outline-none"
+                        title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                    >
+                        <div className={`transition-all duration-300 ease-in-out transform ${isCollapsed ? "rotate-180 scale-110" : "rotate-0 scale-100"}`}>
+                            {isCollapsed ? (
+                                <Menu className="h-6 w-6 text-gold" />
+                            ) : (
+                                <X className="h-6 w-6 text-gold" />
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Logo Title */}
+                    {!isCollapsed && (
+                        <span className="truncate transition-opacity duration-300 opacity-100">
+                            OceanView Admin
+                        </span>
+                    )}
                 </div>
 
                 {/* Navigation */}
@@ -116,9 +123,6 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                                 <p className="font-medium text-gray-900 dark:text-foreground truncate">
                                     {adminName}
                                 </p>
-                                {/* <p className="text-xs text-gray-600 dark:text-muted-foreground truncate">
-                                    Administrator
-                                </p> */}
                             </div>
                         )}
                     </div>
