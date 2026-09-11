@@ -18,7 +18,11 @@ type Item = {
 };
 
 const rooms: Item[] = [
-  { title: "Deluxe Ocean Room", img: roomDeluxe, priceLkr: 38500, priceUsd: 120, status: "Available", desc: "King bed · Sea-facing balcony · 45 m²" },
+  { title: "Deluxe Ocean Room", 
+    img: roomDeluxe, priceLkr: 38500,
+    priceUsd: 120, 
+    status: "Available", 
+    desc: "King bed · Sea-facing balcony · 45 m²" },
   { title: "Family Suite", img: roomFamily, priceLkr: 62000, priceUsd: 195, status: "Few left", badge: "Only 2 rooms left", desc: "Two bedrooms · Lounge · 80 m²" },
   { title: "Presidential Villa", img: roomPresidential, priceLkr: 165000, priceUsd: 520, status: "Available", desc: "Private plunge pool · Butler · 220 m²" },
 ];

@@ -8,36 +8,44 @@ import { RoomTable } from '../components/rooms/RoomTable';
 import { DeleteModal } from '../components/rooms/DeleteModal';
 import { RoomFormModal } from '../components/rooms/RoomFormModal';
 
-
 export interface Room {
-  id: string;
+  id?: number | string;
   number: string;
-  type: 'Standard' | 'Deluxe' | 'Suite' | 'Executive';
+  type: string;
   status: 'available' | 'occupied' | 'maintenance' | 'cleaning';
   price: number;
   capacity: number;
-  amenities: string[];
   description: string;
-  floor: number;
+  roomSizeSqM: number;
+  bedType: string;
+  viewType: string;
+  mealPlan: string;
+  cancellationPolicy: string;
+  amenities: string[];
   images: string[];
 }
 
 type ServerRoom = {
   id: number | string;
   roomNumber: string;
-  roomType: string;
+  roomType: String;
   price: number;
   isAvailable?: boolean;
   capacity?: number;
+  description?: string;
+  roomSizeSqM?: number;
+  bedType?: string;
+  viewType?: string;
+  mealPlan?: string;
+  cancellationPolicy?: string;
   amenities?: string[];
   imageUrls?: string[];
   images?: any[];
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 const api = axios.create({ baseURL: API_BASE_URL });
 
-// Cookie Reader
 const getCookie = (name: string) => {
   if (typeof document === 'undefined') return null;
   const value = `; ${document.cookie}`;
@@ -46,7 +54,6 @@ const getCookie = (name: string) => {
   return null;
 };
 
-// Auth Interceptor
 api.interceptors.request.use((config) => {
   try {
     if (typeof window !== 'undefined') {
@@ -60,17 +67,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Mapping Logic
 const mapServerToRoom = (sr: ServerRoom): Room => ({
-  id: String(sr.id),
+  id: sr.id,
   number: sr.roomNumber ?? '',
-  type: (sr.roomType as Room['type']) || 'Standard',
+  type: String(sr.roomType || 'DELUXE_SUITE'),
   status: sr.isAvailable ? 'available' : 'occupied',
   price: sr.price ?? 0,
   capacity: sr.capacity ?? 1,
+  description: sr.description ?? '',
+  roomSizeSqM: sr.roomSizeSqM ?? 0,
+  bedType: sr.bedType ?? '',
+  viewType: sr.viewType ?? '',
+  mealPlan: sr.mealPlan ?? '',
+  cancellationPolicy: sr.cancellationPolicy ?? '',
   amenities: sr.amenities?.map((a: any) => String(a)) || [],
-  description: '',
-  floor: 1,
   images: (sr.imageUrls || sr.images || []).map((i: any) => String(i)),
 });
 
@@ -80,6 +90,12 @@ const mapRoomToServer = (r: Partial<Room>) => ({
   price: r.price,
   isAvailable: r.status === 'available',
   capacity: r.capacity,
+  description: r.description,
+  roomSizeSqM: r.roomSizeSqM,
+  bedType: r.bedType,
+  viewType: r.viewType,
+  mealPlan: r.mealPlan,
+  cancellationPolicy: r.cancellationPolicy,
   amenities: r.amenities ?? [],
   imageUrls: r.images ?? [],
 });
@@ -87,8 +103,8 @@ const mapRoomToServer = (r: Partial<Room>) => ({
 const roomApi = {
   getAll: () => api.get<ServerRoom[]>('/rooms'),
   create: (data: Partial<Room>) => api.post('/rooms', mapRoomToServer(data)),
-  update: (id: string, data: Partial<Room>) => api.put(`/rooms/${id}`, mapRoomToServer(data)),
-  delete: (id: string) => api.delete(`/rooms/${id}`),
+  update: (id: number | string, data: Partial<Room>) => api.put(`/rooms/${id}`, mapRoomToServer(data)),
+  delete: (id: number | string) => api.delete(`/rooms/${id}`),
 };
 
 export default function RoomsPage() {
@@ -125,12 +141,11 @@ export default function RoomsPage() {
     void fetchRooms();
   }, []);
 
-  // Form Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setIsSubmitting(true);
-      if (editingRoom) {
+      if (editingRoom && editingRoom.id) {
         const response = await roomApi.update(editingRoom.id, formData);
         const updated = response.data ? mapServerToRoom(response.data as ServerRoom) : ({ ...editingRoom, ...formData } as Room);
         setRooms((prev) => prev.map((r) => (r.id === editingRoom.id ? updated : r)));
@@ -152,9 +167,8 @@ export default function RoomsPage() {
     }
   };
 
-  // Confirm Delete Handler
   const confirmDelete = async () => {
-    if (!roomToDelete) return;
+    if (!roomToDelete || !roomToDelete.id) return;
     try {
       setIsSubmitting(true);
       await roomApi.delete(roomToDelete.id);
@@ -205,7 +219,21 @@ export default function RoomsPage() {
         <button
           onClick={() => {
             setEditingRoom(null);
-            setFormData({ number: '', type: 'Standard', status: 'available', price: 0, capacity: 2, amenities: [], floor: 1 });
+            setFormData({
+              number: '',
+              type: 'DELUXE_SUITE',
+              status: 'available',
+              price: 15000,
+              capacity: 2,
+              roomSizeSqM: 35,
+              bedType: '1 King Bed',
+              viewType: 'Sea View',
+              mealPlan: 'Breakfast Included',
+              cancellationPolicy: 'Free cancellation up to 24 hours',
+              description: '',
+              amenities: [],
+              images: []
+            });
             setIsModalOpen(true);
           }}
           className="bg-gold text-white px-4 py-2 rounded-lg flex items-center gap-2"
