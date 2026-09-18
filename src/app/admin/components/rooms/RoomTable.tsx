@@ -60,7 +60,7 @@ export function RoomTable({
                                             </div>
                                             <div>
                                                 <p className="font-medium text-gray-900 dark:text-foreground">Room {room.number}</p>
-                                                <p className="text-xs text-gray-500 dark:text-muted-foreground">ID: {room.id.slice(0, 8)}</p>
+                                                <p className="text-xs text-gray-500 dark:text-muted-foreground">ID: {String(room.id || '').slice(0, 8)}</p>
                                             </div>
                                         </div>
                                     </td>

@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { X, Loader2, Wifi, Tv, Snowflake, Coffee, Bath, Home, Car, Utensils, Smartphone, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Loader2, Wifi, Tv, Snowflake, Coffee, Bath, Home, Car, Utensils, Smartphone, Upload, Bot } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
-
-// page.tsx හි සකසා ඇති Central Room Type එක Import කරගන්න
 import { Room } from '@/app/admin/rooms/page';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const api = axios.create({ baseURL: API_BASE_URL });
+const AI_API_URL = process.env.NEXT_PUBLIC_AI_API_URL;
+const aiApi = axios.create({ baseURL: AI_API_URL });
 
 const getCookie = (name: string) => {
     if (typeof document === 'undefined') return null;
@@ -48,6 +48,7 @@ const amenityIcons: Record<string, React.ReactNode> = {
 
 export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onClose, onSubmit, setFormData }: RoomFormModalProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     if (!isOpen) return null;
 
@@ -79,7 +80,6 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
 
                 const savedImageUrl = res.data.url;
 
-                // imageUrls වෙනුවට images ලෙස update කරන ලදී
                 setFormData((prev) => ({
                     ...prev,
                     images: [...(prev.images || []), savedImageUrl],
@@ -94,11 +94,43 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
     };
 
     const removeImage = (indexToRemove: number) => {
-        // imageUrls වෙනුවට images භාවිතා කර parameters ට explicit types ලබා දෙන ලදී
         setFormData((prev) => ({
             ...prev,
             images: prev.images?.filter((_: string, index: number) => index !== indexToRemove),
         }));
+    };
+
+    // AI Description Generation Handler
+    const handleGenerateDescription = async () => {
+        try {
+            setIsGenerating(true);
+            toast.info("Generating description using AI...");
+
+            const response = await aiApi.post('/generate-description', {
+                type: formData.type || 'STANDARD',
+                price: formData.price || 0,
+                capacity: formData.capacity || 1,
+                roomSizeSqM: formData.roomSizeSqM || null,
+                bedType: formData.bedType || '',
+                viewType: formData.viewType || '',
+                mealPlan: formData.mealPlan || '',
+                amenities: formData.amenities || []
+            });
+
+            if (response.data && response.data.description) {
+                setFormData((prev) => ({
+                    ...prev,
+                    description: response.data.description
+                }));
+                toast.success("Description generated successfully!");
+            }
+        } catch (error: any) {
+            console.error("AI Generation Error:", error);
+            const errMsg = error.response?.data?.detail || "Failed to generate description";
+            toast.error(errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -117,13 +149,11 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Room Number *</label>
-                            {/* roomNumber වෙනුවට number ලෙස සකසන ලදී */}
                             <input type="text" required value={formData.number || ''} onChange={(e) => setFormData({ ...formData, number: e.target.value })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 101" />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Room Type *</label>
-                            {/* roomType වෙනුවට type ලෙස සකසන ලදී */}
                             <select required value={formData.type || 'DELUXE_SUITE'} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none">
                                 <option value="STANDARD">Standard</option>
                                 <option value="DELUXE">Deluxe</option>
@@ -170,9 +200,30 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                         <input type="text" value={formData.cancellationPolicy || ''} onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., Free cancellation up to 24 hours" />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Description</label>
-                        <textarea rows={3} value={formData.description || ''} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="Room description..." />
+                    {/* Description Area & AI Auto Generate Button */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground">Description</label>
+
+                            {/* Auto-Generate Button */}
+                            <button
+                                type="button"
+                                onClick={handleGenerateDescription}
+                                disabled={isGenerating}
+                                className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+                                {isGenerating ? 'Generating...' : 'AI Auto-Generate'}
+                            </button>
+                        </div>
+
+                        <textarea
+                            rows={3}
+                            value={formData.description || ''}
+                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none"
+                            placeholder="Click AI Auto-Generate or write room description..."
+                        />
                     </div>
 
                     <div>
@@ -184,7 +235,6 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                             <p className="text-xs text-gray-500">Click to select room images from your device</p>
                         </div>
 
-                        {/* imageUrls වෙනුවට images පරීක්ෂා කිරීම සහ map කිරීම */}
                         {formData.images && formData.images.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-3">
                                 {formData.images.map((imgUrl: string, index: number) => (
