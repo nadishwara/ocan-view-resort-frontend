@@ -208,7 +208,7 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                             {/* Auto-Generate Button */}
                             <button
                                 type="button"
-                                onClick={`handleGenerateDescription`}
+                                onClick={handleGenerateDescription}
                                 disabled={isGenerating}
                                 className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 disabled:opacity-50"
                             >
