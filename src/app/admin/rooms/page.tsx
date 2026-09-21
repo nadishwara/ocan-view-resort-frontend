@@ -43,7 +43,7 @@ type ServerRoom = {
   images?: any[];
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 const api = axios.create({ baseURL: API_BASE_URL });
 
 const getCookie = (name: string) => {
@@ -63,7 +63,7 @@ api.interceptors.request.use((config) => {
         config.headers['Authorization'] = `Bearer ${token}`;
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return config;
 });
 
@@ -113,7 +113,7 @@ export default function RoomsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
