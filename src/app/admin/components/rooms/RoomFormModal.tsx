@@ -7,9 +7,10 @@ import { toast } from 'sonner';
 import { Room } from '@/app/admin/rooms/page';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const CHATBOT_BASE_URL = process.env.NEXT_PUBLIC_CHATBOT_URL;
+
 const api = axios.create({ baseURL: API_BASE_URL });
-const AI_API_URL = process.env.NEXT_PUBLIC_AI_API_URL;
-const aiApi = axios.create({ baseURL: AI_API_URL });
+const aiApi = axios.create({ baseURL: CHATBOT_BASE_URL });
 
 const getCookie = (name: string) => {
     if (typeof document === 'undefined') return null;
@@ -100,13 +101,12 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
         }));
     };
 
-    // AI Description Generation Handler
     const handleGenerateDescription = async () => {
         try {
             setIsGenerating(true);
             toast.info("Generating description using AI...");
 
-            const response = await aiApi.post('/generate-description', {
+            const response = await aiApi.post('/api/generate-description', {
                 type: formData.type || 'STANDARD',
                 price: formData.price || 0,
                 capacity: formData.capacity || 1,
@@ -166,17 +166,17 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Price (LKR) *</label>
-                            <input type="number" required min="0" value={formData.price || ''} onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 25000" />
+                            <input type="number" required min="0" value={formData.price !== undefined ? formData.price : ''} onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 25000" />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Capacity (Guests) *</label>
-                            <input type="number" required min="1" max="10" value={formData.capacity || ''} onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 2" />
+                            <input type="number" required min="1" max="10" value={formData.capacity !== undefined ? formData.capacity : ''} onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 2" />
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground mb-1.5">Room Size (SqM)</label>
-                            <input type="number" step="0.1" value={formData.roomSizeSqM || ''} onChange={(e) => setFormData({ ...formData, roomSizeSqM: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 45.5" />
+                            <input type="number" step="0.1" value={formData.roomSizeSqM !== undefined ? formData.roomSizeSqM : ''} onChange={(e) => setFormData({ ...formData, roomSizeSqM: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., 45.5" />
                         </div>
 
                         <div>
@@ -200,17 +200,15 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                         <input type="text" value={formData.cancellationPolicy || ''} onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })} className="w-full px-3 py-2 border border-gray-200 dark:border-border rounded-lg outline-none" placeholder="e.g., Free cancellation up to 24 hours" />
                     </div>
 
-                    {/* Description Area & AI Auto Generate Button */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <label className="block text-sm font-medium text-gray-700 dark:text-muted-foreground">Description</label>
 
-                            {/* Auto-Generate Button */}
                             <button
                                 type="button"
                                 onClick={handleGenerateDescription}
                                 disabled={isGenerating}
-                                className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 disabled:opacity-50"
+                                className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                             >
                                 {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
                                 {isGenerating ? 'Generating...' : 'AI Auto-Generate'}

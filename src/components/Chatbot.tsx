@@ -23,9 +23,9 @@ const QUICK_REPLIES = [
 
 async function fetchAssistantReply(userText: string): Promise<string> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-
-    const response = await fetch(`${baseUrl}/api/chat`, {
+    // Next.js Relative Proxy Endpoint එක direct භාවිතය (/api/chat)
+    // `next.config.ts` හි Rewrites මඟින් මෙය Python FastAPI Server එකට යොමු කෙරේ.
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -36,15 +36,13 @@ async function fetchAssistantReply(userText: string): Promise<string> {
     if (!response.ok) {
       if (response.status === 422) {
         const errData = await response.json();
-        console.error("Validation Error Details from FastAPI:", errData);
+        console.error("FastAPI Validation Error:", errData);
       }
       throw new Error(`Server response with status: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Return the response from the API
-    return data.response || data.reply || "I received an empty response from the server.";
+    return data.response || data.reply || "I received an empty response.";
 
   } catch (error) {
     console.error("Chat API Error:", error);
@@ -219,8 +217,8 @@ function Bubble({ role, text }: { role: Role; text: string }) {
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${isUser
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md border border-border bg-card text-foreground"
+          ? "rounded-br-md bg-primary text-primary-foreground"
+          : "rounded-bl-md border border-border bg-card text-foreground"
           }`}
       >
         {isUser ? (
