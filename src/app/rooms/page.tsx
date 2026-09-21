@@ -98,7 +98,7 @@ export default function RoomsServices() {
                 <div className="absolute inset-0 z-0">
                     {/* Next.js Image Component */}
                     <Image
-                        src="https://images.unsplash.com/photo-1776761603930-e4509e386fbf?q=80&w=1470&auto=format&fit=crop"
+                        src="https://images.unsplash.com/photo-1609602126247-4ab7188b4aa1?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                         alt="Ocean View Resort Hero"
                         fill
                         priority
@@ -106,7 +106,7 @@ export default function RoomsServices() {
                         className="object-cover object-center"
                     />
 
-                    <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/40 via-ocean-deep/20 to-background/65 z-10" />
+                    <div className="absolute inset-0 bg-linear-to-b from-ocean-deep/40 via-ocean-deep/30 to-ocean-deep/80" />
                 </div>
 
                 <div className="relative z-10 h-full flex items-center">
