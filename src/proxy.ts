@@ -1,4 +1,4 @@
-// middleware.ts
+// middleware
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { decodeJwt } from 'jose';
@@ -48,7 +48,7 @@ function isAdminRole(token: string | null): boolean {
   }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token = getToken(request);
   const currentPath = request.nextUrl.pathname;
 

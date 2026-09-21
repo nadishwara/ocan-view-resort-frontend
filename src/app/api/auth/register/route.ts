@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAdminRegistration, reserveAdminRegistration } from '@/lib/admin-registration-store';
 
-const SPRING_URL = process.env.SPRING_BACKEND_URL || process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || 'http://localhost:8080';
+const SPRING_URL = process.env.SPRING_BACKEND_URL;
 
 function normalizeRole(body: Record<string, unknown> & { roles?: unknown[] }): 'ADMIN' | 'USER' {
     const roles = Array.isArray(body.roles) ? body.roles : [];

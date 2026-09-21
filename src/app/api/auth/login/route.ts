@@ -1,10 +1,9 @@
-// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const SPRING_URL = process.env.SPRING_BACKEND_URL || "http://localhost:8080";
+        const SPRING_URL = process.env.SPRING_BACKEND_URL;
 
         console.log("🔄 Proxying to:", `${SPRING_URL}/api/auth/login`);
         console.log("📤 Request body:", body);
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
 
         const data = JSON.parse(text);
         
-        // ✅ Token එක Cookie එකක් ලෙස Set කරන්න
         const response = NextResponse.json(data, { status: res.status });
         
         if (data.token) {
