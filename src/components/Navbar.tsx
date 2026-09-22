@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Menu, X, Calendar, LogIn, User as UserIcon, LogOut } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  Menu, X, Calendar, LogIn, User as UserIcon, LogOut,
+  LayoutDashboard, Settings, Bell, ChevronDown
+} from "lucide-react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useRouter } from "next/navigation";
 import AuthPopup from "./auth/AuthPopup";
@@ -14,26 +17,16 @@ const links = [
 ];
 
 const mobileMenuVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    height: 0,
-    transition: { duration: 0.3, ease: "easeInOut" },
-  },
-  visible: {
-    opacity: 1,
-    height: "auto",
-    transition: { duration: 0.3, ease: "easeInOut" },
-  },
-  exit: {
-    opacity: 0,
-    height: 0,
-    transition: { duration: 0.2, ease: "easeInOut" },
-  },
+  hidden: { opacity: 0, height: 0, transition: { duration: 0.3, ease: "easeInOut" } },
+  visible: { opacity: 1, height: "auto", transition: { duration: 0.3, ease: "easeInOut" } },
+  exit: { opacity: 0, height: 0, transition: { duration: 0.2, ease: "easeInOut" } },
 };
 
 interface UserData {
-  name: string;
-  role: string;
+  username?: string;
+  name?: string;
+  role?: string;
+  roles?: string[];
 }
 
 export function Navbar() {
@@ -44,8 +37,10 @@ export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  // User State
+  // User & Dropdown State
   const [user, setUser] = useState<UserData | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const checkUserAuth = () => {
     if (typeof window !== "undefined") {
@@ -54,12 +49,14 @@ export function Navbar() {
 
       if (token && storedUser) {
         try {
-          setUser(JSON.parse(storedUser));
+          const parsed = JSON.parse(storedUser);
+          setUser({
+            name: parsed.name || parsed.username || "User",
+            role: parsed.role || (parsed.roles?.includes("ROLE_ADMIN") ? "ADMIN" : "USER"),
+          });
         } catch {
-          setUser({ name: "User", role: "GUEST" });
+          setUser({ name: "User", role: "USER" });
         }
-      } else if (token) {
-        setUser({ name: "Guest User", role: "GUEST" });
       } else {
         setUser(null);
       }
@@ -85,6 +82,17 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [prevScrollY]);
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLinkClick = () => setOpen(false);
   const handleOpenPopup = () => setIsPopupOpen(true);
   const handleClosePopup = () => {
@@ -100,14 +108,16 @@ export function Navbar() {
     }
   };
 
-  // Logout Handler
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("auth_token");
     localStorage.removeItem("user");
     setUser(null);
+    setIsDropdownOpen(false);
     router.push("/");
   };
+
+  const isAdmin = user?.role?.toUpperCase().includes("ADMIN");
 
   return (
     <>
@@ -149,7 +159,6 @@ export function Navbar() {
 
           {/* Right Side Controls - Desktop */}
           <div className="hidden items-center gap-4 md:flex">
-            {/* Book a stay Button */}
             <button
               onClick={handleBookStay}
               className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-5 py-2 text-sm font-medium
@@ -159,31 +168,91 @@ export function Navbar() {
               Book a stay
             </button>
 
-            {/* Auth Profile Section / Login Button */}
+            {/* Auth Profile / Dropdown Section */}
             {user ? (
-              <div className="flex items-center gap-3 bg-white/10 rounded-full px-3.5 py-1.5 border border-white/20">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-amber-500/20 text-gold border border-gold/40">
-                  <UserIcon className="h-4 w-4" />
-                </div>
-                <div className="leading-tight text-left">
-                  <div className="text-xs font-semibold text-white">{user.name}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-amber-400 font-mono">
-                    {user.role}
-                  </div>
-                </div>
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={handleLogout}
-                  title="Logout"
-                  className="ml-1 text-white/60 hover:text-red-400 transition"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 bg-white/10 hover:bg-white/20 transition rounded-full px-3.5 py-1.5 border border-white/30 backdrop-blur-md cursor-pointer"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-amber-500/20 text-gold border border-gold/40">
+                    <UserIcon className="h-4 w-4" />
+                  </div>
+                  <div className="leading-tight text-left">
+                    <div className="text-xs font-semibold text-white">{user.name}</div>
+                    <div className="text-[9px] uppercase tracking-wider text-amber-400 font-mono">
+                      {user.role}
+                    </div>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-white/60 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
+
+                {/* Dropdown Menu - Styled identically to login button glassmorphism */}
+                <AnimatePresence>
+                  {isDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-white/30 shadow-2xl p-2 z-50 text-white"
+                    >
+                      <div className="px-3 py-2 border-b border-white/15 mb-1">
+                        <p className="text-xs font-semibold text-white">{user.name}</p>
+                        <p className="text-[10px] text-white/60">Logged in</p>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-gold" />
+                        Dashboard
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          router.push("/profile");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
+                      >
+                        <UserIcon className="h-4 w-4 text-gold" />
+                        Profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          router.push("/settings");
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
+                      >
+                        <Settings className="h-4 w-4 text-gold" />
+                        Settings
+                      </button>
+
+                      <div className="h-px bg-white/15 my-1" />
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 rounded-xl transition cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <button
                 onClick={handleOpenPopup}
                 className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium
-                text-white hover:bg-white/20 transition cursor-pointer"
+                text-white hover:bg-white/20 transition cursor-pointer backdrop-blur-md"
               >
                 <LogIn className="h-4 w-4 text-gold" />
                 Login
@@ -195,7 +264,7 @@ export function Navbar() {
           <button
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
-            className="md:hidden text-white"
+            className="md:hidden text-white cursor-pointer"
           >
             {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -229,24 +298,51 @@ export function Navbar() {
                       handleLinkClick();
                       handleBookStay();
                     }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2.5 text-sm font-medium text-[#141e2a]"
+                    className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2.5 text-sm font-medium text-[#141e2a] cursor-pointer"
                   >
                     <Calendar className="h-4 w-4" />
                     Book a stay
                   </button>
 
                   {user ? (
-                    <div className="flex items-center justify-between bg-white/10 rounded-xl p-3 mt-1">
+                    <div className="flex flex-col gap-2 bg-white/10 border border-white/30 backdrop-blur-md rounded-2xl p-3 mt-1">
                       <div className="flex items-center gap-3">
                         <UserIcon className="h-5 w-5 text-gold" />
                         <div className="text-left">
                           <div className="text-xs font-semibold text-white">{user.name}</div>
-                          <div className="text-[9px] uppercase tracking-wider text-amber-400">
+                          <div className="text-[9px] uppercase tracking-wider text-amber-400 font-mono">
                             {user.role}
                           </div>
                         </div>
                       </div>
-                      <button onClick={handleLogout} className="text-red-400 text-xs font-medium">
+
+                      <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/15">
+                        <button
+                          onClick={() => {
+                            handleLinkClick();
+                            router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
+                          }}
+                          className="flex items-center justify-center gap-1.5 py-2 text-xs bg-white/10 hover:bg-white/20 text-white rounded-xl transition cursor-pointer"
+                        >
+                          <LayoutDashboard className="h-3.5 w-3.5 text-gold" />
+                          Dashboard
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleLinkClick();
+                            router.push("/profile");
+                          }}
+                          className="flex items-center justify-center gap-1.5 py-2 text-xs bg-white/10 hover:bg-white/20 text-white rounded-xl transition cursor-pointer"
+                        >
+                          <UserIcon className="h-3.5 w-3.5 text-gold" />
+                          Profile
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full mt-1 py-1.5 text-xs text-red-400 font-medium hover:bg-red-500/20 rounded-xl transition cursor-pointer"
+                      >
                         Logout
                       </button>
                     </div>
@@ -256,7 +352,7 @@ export function Navbar() {
                         handleLinkClick();
                         handleOpenPopup();
                       }}
-                      className="flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-medium text-white"
+                      className="flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-medium text-white cursor-pointer backdrop-blur-md hover:bg-white/20 transition"
                     >
                       <LogIn className="h-4 w-4 text-gold" />
                       Login
