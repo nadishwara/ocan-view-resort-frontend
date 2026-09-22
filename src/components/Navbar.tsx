@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import {
   Menu, X, Calendar, LogIn, User as UserIcon, LogOut,
-  LayoutDashboard, Settings, Bell, ChevronDown
+  LayoutDashboard, Settings, ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useSearchParams, usePathname } from "next/navigation";
 import AuthPopup from "./auth/AuthPopup";
+import { TokenService } from "@/app/services/tokenService";
+import { AuthService } from "@/app/services/authService";
 
 const links = [
   { href: "/", label: "Home" },
@@ -29,42 +32,104 @@ interface UserData {
   roles?: string[];
 }
 
+function UrlAuthWatcher({
+  onRequireLogin,
+  onCleanLogin,
+}: {
+  onRequireLogin: () => void;
+  onCleanLogin: () => void;
+}) {
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (searchParams.get("login") === "true") {
+      const token = typeof window !== "undefined"
+        ? (localStorage.getItem("token") || localStorage.getItem("auth_token"))
+        : null;
+
+      if (token) {
+        onCleanLogin();
+      } else {
+        onRequireLogin();
+      }
+    }
+  }, [searchParams, pathname, onRequireLogin, onCleanLogin]);
+
+  return null;
+}
+
 export function Navbar() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [prevScrollY, setPrevScrollY] = useState(0);
   const [visible, setVisible] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-  // User & Dropdown State
   const [user, setUser] = useState<UserData | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const checkUserAuth = () => {
+  const stripLoginParam = useCallback(() => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
-      const storedUser = localStorage.getItem("user");
-
-      if (token && storedUser) {
-        try {
-          const parsed = JSON.parse(storedUser);
-          setUser({
-            name: parsed.name || parsed.username || "User",
-            role: parsed.role || (parsed.roles?.includes("ROLE_ADMIN") ? "ADMIN" : "USER"),
-          });
-        } catch {
-          setUser({ name: "User", role: "USER" });
-        }
-      } else {
-        setUser(null);
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("login")) {
+        url.searchParams.delete("login");
+        const cleanUrl = url.pathname + (url.search ? url.search : "");
+        window.history.replaceState({}, "", cleanUrl);
       }
     }
-  };
+  }, []);
+
+  const checkUserAuth = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      let name = "User";
+      let role = "USER";
+
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          name = parsed.name || parsed.username || "User";
+          const parsedRole = String(parsed.role ?? "").toUpperCase();
+          const parsedRoles: string[] = Array.isArray(parsed.roles) ? parsed.roles : [];
+          if (
+            parsedRole.includes("ADMIN") ||
+            parsedRoles.some((r) => String(r).toUpperCase().includes("ADMIN"))
+          ) {
+            role = "ADMIN";
+          }
+        } catch {
+          // fallback to token decoding below
+        }
+      }
+
+      // Check token directly for administrator privileges
+      if (TokenService.isAdmin(token)) {
+        role = "ADMIN";
+      }
+
+      const decoded = TokenService.decode(token);
+      if (decoded && name === "User") {
+        name = (decoded as any).name || decoded.sub || "User";
+      }
+
+      setUser({ name, role });
+    }
+  }, []);
 
   useEffect(() => {
     checkUserAuth();
+
+    const handleAuthChange = () => {
+      checkUserAuth();
+    };
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -79,10 +144,13 @@ export function Navbar() {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [prevScrollY]);
+    window.addEventListener("auth-change", handleAuthChange);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
+  }, [prevScrollY, checkUserAuth]);
 
-  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -95,29 +163,53 @@ export function Navbar() {
 
   const handleLinkClick = () => setOpen(false);
   const handleOpenPopup = () => setIsPopupOpen(true);
+
   const handleClosePopup = () => {
     setIsPopupOpen(false);
+    stripLoginParam();
     checkUserAuth();
   };
 
   const handleBookStay = () => {
     if (user) {
-      router.push("/rooms");
+      window.location.href = "/rooms";
     } else {
       setIsPopupOpen(true);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user");
+    AuthService.logout();
     setUser(null);
     setIsDropdownOpen(false);
-    router.push("/");
+    window.location.href = "/";
   };
 
   const isAdmin = user?.role?.toUpperCase().includes("ADMIN");
+  const dashboardPath = isAdmin ? "/admin/dashboard" : "/dashboard";
+
+  const handleNavigate = (path: string) => {
+    setIsDropdownOpen(false);
+    setOpen(false);
+
+    if (typeof window !== "undefined") {
+      stripLoginParam();
+
+      // Ensure freshly synced cookies for middleware inspection
+      const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+      if (token) {
+        const maxAgeDays = 7 * 86400;
+        const expires = new Date(Date.now() + 7 * 86400 * 1000).toUTCString();
+        const isSecure = window.location.protocol === "https:";
+        const secureFlag = isSecure ? "; Secure" : "";
+
+        document.cookie = `token=${token}; path=/; max-age=${maxAgeDays}; expires=${expires}; SameSite=Lax${secureFlag}`;
+        document.cookie = `auth_token=${token}; path=/; max-age=${maxAgeDays}; expires=${expires}; SameSite=Lax${secureFlag}`;
+      }
+
+      window.location.href = path;
+    }
+  };
 
   return (
     <>
@@ -130,7 +222,7 @@ export function Navbar() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-10">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2 shrink-0">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-ocean text-gold font-display text-lg">
               O
             </span>
@@ -142,7 +234,7 @@ export function Navbar() {
                 Resort · Sri Lanka
               </div>
             </div>
-          </a>
+          </Link>
 
           {/* Navigation Links - Desktop */}
           <nav className="hidden items-center gap-8 md:flex absolute left-1/2 -translate-x-1/2">
@@ -187,7 +279,7 @@ export function Navbar() {
                   <ChevronDown className={`h-4 w-4 text-white/60 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
                 </button>
 
-                {/* Dropdown Menu - Styled identically to login button glassmorphism */}
+                {/* Dropdown Menu */}
                 <AnimatePresence>
                   {isDropdownOpen && (
                     <motion.div
@@ -203,10 +295,7 @@ export function Navbar() {
                       </div>
 
                       <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
-                        }}
+                        onClick={() => handleNavigate(dashboardPath)}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
                       >
                         <LayoutDashboard className="h-4 w-4 text-gold" />
@@ -214,10 +303,7 @@ export function Navbar() {
                       </button>
 
                       <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          router.push("/profile");
-                        }}
+                        onClick={() => handleNavigate("/profile")}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
                       >
                         <UserIcon className="h-4 w-4 text-gold" />
@@ -225,10 +311,7 @@ export function Navbar() {
                       </button>
 
                       <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          router.push("/settings");
-                        }}
+                        onClick={() => handleNavigate("/settings")}
                         className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/80 hover:bg-white/20 hover:text-white rounded-xl transition cursor-pointer"
                       >
                         <Settings className="h-4 w-4 text-gold" />
@@ -318,20 +401,14 @@ export function Navbar() {
 
                       <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/15">
                         <button
-                          onClick={() => {
-                            handleLinkClick();
-                            router.push(isAdmin ? "/admin/dashboard" : "/dashboard");
-                          }}
+                          onClick={() => handleNavigate(dashboardPath)}
                           className="flex items-center justify-center gap-1.5 py-2 text-xs bg-white/10 hover:bg-white/20 text-white rounded-xl transition cursor-pointer"
                         >
                           <LayoutDashboard className="h-3.5 w-3.5 text-gold" />
                           Dashboard
                         </button>
                         <button
-                          onClick={() => {
-                            handleLinkClick();
-                            router.push("/profile");
-                          }}
+                          onClick={() => handleNavigate("/profile")}
                           className="flex items-center justify-center gap-1.5 py-2 text-xs bg-white/10 hover:bg-white/20 text-white rounded-xl transition cursor-pointer"
                         >
                           <UserIcon className="h-3.5 w-3.5 text-gold" />
@@ -341,7 +418,7 @@ export function Navbar() {
 
                       <button
                         onClick={handleLogout}
-                        className="w-full mt-1 py-1.5 text-xs text-red-400 font-medium hover:bg-red-500/20 rounded-xl transition cursor-pointer"
+                        className="w-full mt-1 py-1.5 text-xs text-red-400 hover:bg-red-500/20 rounded-xl transition cursor-pointer"
                       >
                         Logout
                       </button>
@@ -364,6 +441,13 @@ export function Navbar() {
           )}
         </AnimatePresence>
       </motion.header>
+
+      <Suspense fallback={null}>
+        <UrlAuthWatcher
+          onRequireLogin={() => setIsPopupOpen(true)}
+          onCleanLogin={stripLoginParam}
+        />
+      </Suspense>
 
       <AuthPopup
         isOpen={isPopupOpen}

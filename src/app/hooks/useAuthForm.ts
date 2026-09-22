@@ -13,7 +13,6 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
     const [isLoading, setIsLoading] = useState(false);
     const isMounted = useRef(true);
 
-    // Lifecycle cleanup
     useEffect(() => {
         isMounted.current = true;
         return () => {
@@ -21,7 +20,6 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
         };
     }, []);
 
-    // Close on ESC Key
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
             if (e.key === "Escape" && isOpen) {
@@ -32,7 +30,6 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
         return () => window.removeEventListener("keydown", handleEsc);
     }, [isOpen, onClose]);
 
-    // Body scroll lock
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = "hidden";
@@ -44,7 +41,6 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
         };
     }, [isOpen]);
 
-    // Clear error on mode switch
     const resetError = useCallback(() => {
         if (isMounted.current) setError("");
     }, []);
@@ -58,21 +54,49 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
         const isAdminFromResponse = loginData?.isAdmin === true;
         const isAdminFromToken = TokenService.isAdmin(token);
         const isAdmin = isAdminFromResponse || isAdminFromToken;
-
-        if (decoded && isMounted.current) {
-            localStorage.setItem("token", token);
-            localStorage.setItem("user", JSON.stringify({
-                username: decoded.sub,
-                name: decoded.name || decoded.sub,
-                roles: TokenService.getRolesFromToken(token),
-                role: isAdmin ? "ADMIN" : "USER"
-            }));
-        }
+        const rolesFromToken = TokenService.getRolesFromToken(token);
 
         if (isMounted.current) {
-            onClose(); // Closes modal without page redirect
+            const usernameVal = decoded?.sub || username;
+            const nameVal = (decoded as any)?.name || decoded?.sub || name || username;
+            const finalRoles = rolesFromToken.length > 0 ? rolesFromToken : (isAdmin ? ["ROLE_ADMIN"] : ["ROLE_USER"]);
+
+            // 1. Save to LocalStorage
+            localStorage.setItem("token", token);
+            localStorage.setItem("auth_token", token);
+            localStorage.setItem("user", JSON.stringify({
+                username: usernameVal,
+                name: nameVal,
+                roles: finalRoles,
+                role: isAdmin ? "ADMIN" : "USER"
+            }));
+
+            // 2. Set Cookies for Middleware and Server Components (immediate cross-route sync)
+            const maxAgeDays = 7 * 86400; // 7 days
+            const expires = new Date(Date.now() + 7 * 86400 * 1000).toUTCString();
+            const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+            const secureFlag = isSecure ? "; Secure" : "";
+
+            document.cookie = `token=${token}; path=/; max-age=${maxAgeDays}; expires=${expires}; SameSite=Lax${secureFlag}`;
+            document.cookie = `auth_token=${token}; path=/; max-age=${maxAgeDays}; expires=${expires}; SameSite=Lax${secureFlag}`;
+
+            // 3. Clean ?login=true query param from URL
+            if (typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has("login")) {
+                    url.searchParams.delete("login");
+                    const cleanUrl = url.pathname + (url.search ? url.search : "");
+                    window.history.replaceState({}, "", cleanUrl);
+                }
+            }
+
+            // 4. Notify app of authentication change
+            window.dispatchEvent(new Event("auth-change"));
+
+            // 5. Close auth popup without navigating away
+            onClose();
         }
-    }, [onClose]);
+    }, [name, onClose, username]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,7 +129,7 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
             const error = err as AuthError;
             let errorMessage = "Something went wrong. Please try again.";
 
-            if (error.message.includes("Failed to fetch")) {
+            if (error.message?.includes("Failed to fetch")) {
                 errorMessage = "Cannot connect to server. Please check your internet connection.";
             } else if (error.status === 401) {
                 errorMessage = "Invalid username or password. Please try again.";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AuthService } from "@/app/services/authService";
 import {
     LayoutDashboard,
     BedDouble,
@@ -23,8 +24,7 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     const [adminName] = useState("Admin");
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        AuthService.logout();
         window.location.href = "/";
     };
 

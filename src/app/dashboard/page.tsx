@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AuthService } from "@/app/services/authService";
 import {
     LayoutDashboard,
     BedDouble,
@@ -160,8 +161,7 @@ export default function UserDashboard() {
     const pastBookings = bookings.filter((b) => b.status === "checked-out" || b.status === "cancelled");
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        AuthService.logout();
         window.location.href = "/";
     };
 

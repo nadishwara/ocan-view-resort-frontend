@@ -1,4 +1,5 @@
 import { AuthError, LoginResponse } from "../types/auth";
+import { TokenService } from "./tokenService";
 
 const API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || "http://localhost:8080";
 
@@ -65,12 +66,25 @@ export class AuthService {
             localStorage.removeItem("token");
             localStorage.removeItem("auth_token");
             localStorage.removeItem("user");
+
+            // Clear auth cookies on all paths
+            document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0;";
+            document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; max-age=0;";
+
+            window.dispatchEvent(new Event("auth-change"));
         }
     }
 
     static getToken(): string | null {
         if (typeof window !== "undefined") {
-            return localStorage.getItem("token") || localStorage.getItem("auth_token");
+            const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
+            if (token) return token;
+
+            // Fallback: check document.cookie
+            const match = document.cookie.match(/(?:^|;\s*)(?:auth_token|token)=([^;]+)/);
+            if (match) {
+                return decodeURIComponent(match[1]);
+            }
         }
         return null;
     }
@@ -79,12 +93,13 @@ export class AuthService {
         const token = this.getToken();
         if (!token) return false;
 
-        try {
-            const payload = JSON.parse(atob(token.split(".")[1]));
-            return Date.now() < payload.exp * 1000;
-        } catch {
-            return false;
+        const decoded = TokenService.decode(token);
+        if (!decoded) return false;
+
+        if (decoded.exp) {
+            return Date.now() < decoded.exp * 1000;
         }
+        return true;
     }
 }
 
