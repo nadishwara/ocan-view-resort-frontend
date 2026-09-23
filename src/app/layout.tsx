@@ -3,6 +3,7 @@ import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Analytics } from '@vercel/analytics/next';
 import ConditionalLayout from "@/components/ConditionalLayout";
+import ReCaptchaProvider from "@/components/providers/ReCaptchaProvider";
 
 const inter = Inter({
     variable: "--font-sans",
@@ -32,10 +33,12 @@ export default function RootLayout({
             className={`${inter.variable} ${cormorant.variable} h-full scroll-smooth antialiased`}
         >
             <body className="min-h-full flex flex-col">
-                <ConditionalLayout>
-                    {children}
-                </ConditionalLayout>
-                <Analytics />
+                <ReCaptchaProvider>
+                    <ConditionalLayout>
+                        {children}
+                    </ConditionalLayout>
+                    <Analytics />
+                </ReCaptchaProvider>
             </body>
         </html>
     );

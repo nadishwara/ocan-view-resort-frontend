@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AuthService } from "../services/authService";
 import { TokenService } from "../services/tokenService";
 import { AuthError, LoginResponse } from "../types/auth";
+import { useReCaptchaToken } from "./useReCaptchaToken";
 
 export function useAuthForm(isOpen: boolean, onClose: () => void) {
     const [isLogin, setIsLogin] = useState(true);
@@ -12,6 +13,7 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const isMounted = useRef(true);
+    const { getRecaptchaToken } = useReCaptchaToken();
 
     useEffect(() => {
         isMounted.current = true;
@@ -106,14 +108,24 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
         setIsLoading(true);
 
         try {
+            const actionName = isLogin ? "user_login" : "user_register";
+            const recaptchaToken = await getRecaptchaToken(actionName);
+            if (!recaptchaToken) {
+                if (isMounted.current) {
+                    setError("Security verification failed. Please refresh and try again.");
+                    setIsLoading(false);
+                }
+                return;
+            }
             if (isLogin) {
-                const data = await AuthService.login(username, password);
+                const data = await AuthService.login(username, password, recaptchaToken);
                 handleAuthSuccess(data.token, data);
             } else {
                 try {
                     const registrationRole = isAdminRegistration ? "ADMIN" : "USER";
-                    await AuthService.register(name, username, password, registrationRole);
+                    await AuthService.register(name, username, password, registrationRole, recaptchaToken);
 
+                    const loginToken = await getRecaptchaToken("user_login_after_register");
                     const loginData = await AuthService.login(username, password);
                     handleAuthSuccess(loginData.token, loginData);
                 } catch (registerError) {

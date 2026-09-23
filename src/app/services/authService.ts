@@ -1,7 +1,7 @@
 import { AuthError, LoginResponse } from "../types/auth";
 import { TokenService } from "./tokenService";
 
-const API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL;
 
 export class AuthService {
     private static async handleResponse<T>(response: Response): Promise<T> {
@@ -24,14 +24,18 @@ export class AuthService {
         return data as T;
     }
 
-    static async login(username: string, password: string): Promise<LoginResponse> {
+    static async login(
+        username: string,
+        password: string,
+        reCaptchaToken?: string | null
+    ): Promise<LoginResponse> {
         const response = await fetch(`${API_URL}/api/auth/login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ username, password, reCaptchaToken }),
         });
 
         const data = await this.handleResponse<LoginResponse>(response);
@@ -47,7 +51,8 @@ export class AuthService {
         name: string,
         username: string,
         password: string,
-        role: "ADMIN" | "USER" = "USER"
+        role: "ADMIN" | "USER" = "USER",
+        recaptchaToken?: string | null
     ): Promise<LoginResponse> {
         const response = await fetch(`${API_URL}/api/auth/register`, {
             method: "POST",
@@ -55,7 +60,7 @@ export class AuthService {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
             },
-            body: JSON.stringify({ name, username, password, role }),
+            body: JSON.stringify({ name, username, password, role, recaptchaToken }),
         });
 
         return await this.handleResponse<LoginResponse>(response);
