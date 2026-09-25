@@ -186,7 +186,7 @@ export function Navbar() {
   };
 
   const isAdmin = user?.role?.toUpperCase().includes("ADMIN");
-  const dashboardPath = isAdmin ? "/admin/dashboard" : "/dashboard";
+  const dashboardPath = isAdmin ? "/admin/dashboard" : "/user/dashboard";
 
   const handleNavigate = (path: string) => {
     setIsDropdownOpen(false);
