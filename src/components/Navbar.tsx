@@ -16,7 +16,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/rooms", label: "Rooms & Services" },
   { href: "#offers", label: "Offers" },
-  { href: "#contact", label: "Contact" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const mobileMenuVariants: Variants = {
