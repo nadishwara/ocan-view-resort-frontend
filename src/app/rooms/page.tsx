@@ -62,7 +62,7 @@ export default function RoomsServices() {
             return imagePath;
         }
         const cleanPath = imagePath.startsWith("/") ? imagePath : `/${imagePath}`;
-        return `${BACKEND_HOST}${cleanPath}`;
+        return cleanPath;
     };
 
     // Category Normalization Helper

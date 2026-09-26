@@ -16,7 +16,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/rooms", label: "Rooms & Services" },
   { href: "#offers", label: "Offers" },
-  { href: "#contact", label: "Contact" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const mobileMenuVariants: Variants = {
@@ -186,7 +186,7 @@ export function Navbar() {
   };
 
   const isAdmin = user?.role?.toUpperCase().includes("ADMIN");
-  const dashboardPath = isAdmin ? "/admin/dashboard" : "/dashboard";
+  const dashboardPath = isAdmin ? "/admin/dashboard" : "/user/dashboard";
 
   const handleNavigate = (path: string) => {
     setIsDropdownOpen(false);

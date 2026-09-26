@@ -125,8 +125,8 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
                     const registrationRole = isAdminRegistration ? "ADMIN" : "USER";
                     await AuthService.register(name, username, password, registrationRole, recaptchaToken);
 
-                    const loginToken = await getRecaptchaToken("user_login_after_register");
-                    const loginData = await AuthService.login(username, password);
+                    const autoLoginToken = await getRecaptchaToken("user_login_after_register");
+                    const loginData = await AuthService.login(username, password, autoLoginToken || undefined);
                     handleAuthSuccess(loginData.token, loginData);
                 } catch (registerError) {
                     const err = registerError as AuthError;
@@ -158,7 +158,7 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
     };
 
     const handleGoogleSignUp = () => {
-        const SPRING_API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL || "http://localhost:8080";
+        const SPRING_API_URL = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL;
         window.location.href = `${SPRING_API_URL}/oauth2/authorization/google`;
     };
 

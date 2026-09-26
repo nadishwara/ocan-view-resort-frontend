@@ -31,8 +31,12 @@ export default function RootLayout({
         <html
             lang="en"
             className={`${inter.variable} ${cormorant.variable} h-full scroll-smooth antialiased`}
+            suppressHydrationWarning
         >
-            <body className="min-h-full flex flex-col">
+            <body
+                className="min-h-full flex flex-col"
+                suppressHydrationWarning
+            >
                 <ReCaptchaProvider>
                     <ConditionalLayout>
                         {children}
