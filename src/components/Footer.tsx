@@ -13,7 +13,7 @@ export function Footer() {
             </div>
           </div>
           <p className="mt-5 max-w-sm text-sm text-white/70">
-            A premium beachfront sanctuary on Sri Lanka's south coast — where heritage hospitality
+            A premium beachfront sanctuary on Sri Lanka’s south coast — where heritage hospitality
             meets contemporary luxury.
           </p>
         </div>

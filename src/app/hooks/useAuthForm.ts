@@ -60,7 +60,8 @@ export function useAuthForm(isOpen: boolean, onClose: () => void) {
 
         if (isMounted.current) {
             const usernameVal = decoded?.sub || username;
-            const nameVal = (decoded as any)?.name || decoded?.sub || name || username;
+            // const nameVal = (decoded as any)?.name || decoded?.sub || name || username;
+            const nameVal = decoded?.name || decoded?.sub || name || username;
             const finalRoles = rolesFromToken.length > 0 ? rolesFromToken : (isAdmin ? ["ROLE_ADMIN"] : ["ROLE_USER"]);
 
             // 1. Save to LocalStorage

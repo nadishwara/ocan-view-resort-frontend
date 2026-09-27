@@ -10,7 +10,6 @@ export const useRooms = () => {
 
     const getRooms = useCallback(async () => {
         try {
-            setLoading(true);
             setError(null);
             const data = await fetchAllRooms();
 
@@ -18,7 +17,7 @@ export const useRooms = () => {
             const roomsArray = Array.isArray(data) ? data : [];
             setRooms(roomsArray);
             setGroupedRooms(groupRoomByType(roomsArray));
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to fetch rooms:", err);
             setError("Failed to load rooms, please try again later!");
             setRooms([]);
@@ -29,10 +28,26 @@ export const useRooms = () => {
     }, []);
 
     useEffect(() => {
-        getRooms();
+        let isMounted = true;
+
+        const loadRooms = async () => {
+            if (isMounted) {
+                await getRooms();
+            }
+        };
+        loadRooms();
+
+        return () => {
+            isMounted = false;
+        };
     }, [getRooms]);
 
-    return { rooms, groupedRooms, loading, error, refetchRooms: getRooms };
+    const refetchRooms = useCallback(async () => {
+        setLoading(true);
+        await getRooms();
+    }, [getRooms]);
+
+    return { rooms, groupedRooms, loading, error, refetchRooms };
 };
 
 // Alias for backward compatibility

@@ -10,14 +10,19 @@ const api = axios.create({
     },
 });
 
+interface PaginatedRoomResponse {
+    content?: RoomResponseDto[];
+}
+
 export const fetchAllRooms = async (): Promise<RoomResponseDto[]> => {
     try {
-        const response = await api.get<RoomResponseDto[]>("/rooms");
+        const response = await api.get<RoomResponseDto[] | PaginatedRoomResponse>("/rooms");
         const data = response.data;
+
         if (Array.isArray(data)) {
             return data;
-        } else if (data && Array.isArray((data as any).content)) {
-            return (data as any).content;
+        } else if (data && "content" in data && Array.isArray(data.content)) {
+            return data.content;
         }
         return [];
     } catch (error) {

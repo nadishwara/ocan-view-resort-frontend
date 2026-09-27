@@ -13,12 +13,13 @@ export interface LoginResponse {
 
 export interface DecodedToken {
     sub: string;
+    name?: string;
     roles?: string[] | string;
     authorities?: Array<string | { authority?: string }>;
     role?: string | string[];
     exp: number;
     iat: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface AuthError extends Error {

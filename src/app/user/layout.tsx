@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 
 export default function UserLayout({
@@ -8,28 +8,28 @@ export default function UserLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const [userName, setUserName] = useState("John Doe");
-
-    useEffect(() => {
-        try {
-            const storedUser = localStorage.getItem("user");
-            if (storedUser) {
-                const parsed = JSON.parse(storedUser);
-                if (parsed.name) {
-                    setUserName(parsed.name);
-                } else if (parsed.username) {
-                    setUserName(parsed.username);
+    const [userName] = useState<string>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const storedUser = localStorage.getItem("user");
+                if (storedUser) {
+                    const storedUser = localStorage.getItem("user");
+                    if (storedUser) {
+                        const parsed = JSON.parse(storedUser);
+                        return parsed.name || parsed.username;
+                    }
                 }
+            } catch {
+                // Ignore parse errors and fallback to default
             }
-        } catch {
-            // Ignore parse errors and fallback to default
         }
-    }, []);
+    });
+
 
     return (
         // fixed inset-0 z-[100] ensures the User Dashboard occupies the full viewport
         // and completely isolates from the public Navbar, ChatBot, and Footer.
-        <div className="fixed inset-0 z-[100] flex bg-gray-50 dark:bg-background text-foreground overflow-hidden">
+        <div className="fixed inset-0 z-100 flex bg-gray-50 dark:bg-background text-foreground overflow-hidden">
             {/* Sidebar */}
             <Sidebar
                 userName={userName}

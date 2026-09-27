@@ -20,7 +20,7 @@ export function OverviewTab({ userName, profile, upcomingBookings, setActiveTab 
                         Welcome back, {userName}! 👋
                     </h1>
                     <p className="text-sm text-gray-600 dark:text-muted-foreground">
-                        Here's what's happening with your stays
+                        Here’s what’s happening with your stays
                     </p>
                 </div>
                 <div className="flex items-center gap-3">

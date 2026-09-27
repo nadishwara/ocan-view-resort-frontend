@@ -117,7 +117,8 @@ export function Navbar() {
 
       const decoded = TokenService.decode(token);
       if (decoded && name === "User") {
-        name = (decoded as any).name || decoded.sub || "User";
+        const record = decoded as Record<string, unknown>;
+        name = String(record.name ?? decoded.sub ?? "User");
       }
 
       setUser({ name, role });
@@ -125,7 +126,9 @@ export function Navbar() {
   }, []);
 
   useEffect(() => {
-    checkUserAuth();
+    queueMicrotask(() => {
+      checkUserAuth();
+    });
 
     const handleAuthChange = () => {
       checkUserAuth();
@@ -253,7 +256,7 @@ export function Navbar() {
           <div className="hidden items-center gap-4 md:flex">
             <button
               onClick={handleBookStay}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-5 py-2 text-sm font-medium
+              className="flex items-center gap-2 rounded-full bg-linear-to-r from-[#f7c948] to-[#e8b42b] px-5 py-2 text-sm font-medium
               text-[#141e2a] shadow-lg shadow-[#f7c948]/30 transition hover:brightness-105 cursor-pointer"
             >
               <Calendar className="h-4 w-4" />
@@ -381,7 +384,7 @@ export function Navbar() {
                       handleLinkClick();
                       handleBookStay();
                     }}
-                    className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2.5 text-sm font-medium text-[#141e2a] cursor-pointer"
+                    className="flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-[#f7c948] to-[#e8b42b] px-4 py-2.5 text-sm font-medium text-[#141e2a] cursor-pointer"
                   >
                     <Calendar className="h-4 w-4" />
                     Book a stay

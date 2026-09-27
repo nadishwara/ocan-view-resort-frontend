@@ -1,5 +1,6 @@
 import { Heart, Gift } from "lucide-react";
 import honeymoon from "@/assets/offer-honeymoon.jpg";
+import Image from "next/image";
 
 export function SpecialOffers() {
   return (
@@ -12,9 +13,10 @@ export function SpecialOffers() {
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Feature offer */}
         <div className="relative overflow-hidden rounded-3xl shadow-luxe lg:col-span-3">
-          <img src={honeymoon.src} alt="Honeymoon package" loading="lazy" width={1600} height={900}
-            className="h-full max-h-[520px] w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-tr from-ocean-deep/85 via-ocean-deep/40 to-transparent" />
+          <Image
+            src={honeymoon.src} alt="Honeymoon package" loading="lazy" width={1600} height={900}
+            className="h-full max-h-130 w-full object-cover" />
+          <div className="absolute inset-0 bg-linear-to-tr from-ocean-deep/85 via-ocean-deep/40 to-transparent" />
           <div className="absolute inset-0 flex flex-col justify-end p-8 text-white md:p-12">
             <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-gradient-gold px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold-foreground">
               <Heart className="h-3 w-3" /> Honeymoon Package
