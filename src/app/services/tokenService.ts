@@ -60,14 +60,17 @@ export class TokenService {
         const decoded = this.decode(token);
         if (!decoded) return [];
 
-        const rawRoles = decoded.roles ?? decoded.authorities ?? decoded.role ?? (decoded as any).scope ?? (decoded as any).scp;
+        const record = decoded as Record<string, unknown>;
+        const rawRoles = decoded.roles ?? decoded.authorities ?? decoded.role ?? record.scope ?? record.scp;
         return this.normalizeRoleValue(rawRoles).map((role) => role.toString().toUpperCase());
     }
 
     static isAdmin(token: string): boolean {
         const decoded = this.decode(token);
         if (!decoded) return false;
-        if ((decoded as any).isAdmin === true) return true;
+
+        const record = decoded as Record<string, unknown>;
+        if (record.isAdmin === true) return true;
 
         const roles = this.getRolesFromToken(token);
         return roles.some((role) => role === 'ROLE_ADMIN' || role === 'ADMIN' || role.endsWith('_ADMIN'));

@@ -8,7 +8,7 @@ import { useRooms } from "@/app/hooks/useRooms";
 import { RoomResponseDto } from "@/app/types/room";
 import Image from "next/image";
 
-const BACKEND_HOST = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL;
+// const BACKEND_HOST = process.env.NEXT_PUBLIC_SPRING_BACKEND_URL;
 
 // Services Static Data
 const SERVICES = [
@@ -101,6 +101,7 @@ export default function RoomsServices() {
                         src="https://images.unsplash.com/photo-1609602126247-4ab7188b4aa1?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                         alt="Ocean View Resort Hero"
                         fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         priority
                         quality={90}
                         className="object-cover object-center"
@@ -257,9 +258,11 @@ export default function RoomsServices() {
                                             >
                                                 {/* Room Image Container */}
                                                 <div className="relative h-56 sm:h-64 md:h-72 overflow-hidden bg-muted">
-                                                    <img
+                                                    <Image
                                                         src={imageUrl}
                                                         alt={`Room ${room.roomNumber}`}
+                                                        fill
+                                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                                         onError={(e) => {
                                                             (e.target as HTMLImageElement).src = DEFAULT_IMAGE_PLACEHOLDER;

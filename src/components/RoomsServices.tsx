@@ -1,3 +1,4 @@
+import Image, { StaticImageData } from "next/image";
 import roomDeluxe from "@/assets/room-deluxe.jpg";
 import roomFamily from "@/assets/room-family.jpg";
 import roomPresidential from "@/assets/room-presidential.jpg";
@@ -9,7 +10,7 @@ type Status = "Available" | "Few left" | "Sold out";
 
 type Item = {
   title: string;
-  img: any;
+  img: StaticImageData;
   priceLkr?: number;
   priceUsd?: number;
   status: Status;
@@ -20,7 +21,8 @@ type Item = {
 const rooms: Item[] = [
   {
     title: "Deluxe Ocean Room",
-    img: roomDeluxe, priceLkr: 38500,
+    img: roomDeluxe,
+    priceLkr: 38500,
     priceUsd: 120,
     status: "Available",
     desc: "King bed · Sea-facing balcony · 45 m²"
@@ -71,13 +73,11 @@ function Card({ item }: { item: Item }) {
         : "bg-primary/10 text-primary";
   return (
     <article className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:-translate-y-1 hover:shadow-luxe">
-      <div className="relative aspect-[4/3] overflow-hidden">
-        <img
-          src={item.img.src}
+      <div className="relative aspect-4/3 overflow-hidden">
+        <Image
+          src={item.img}
           alt={item.title}
-          loading="lazy"
-          width={1024}
-          height={768}
+          placeholder="blur"
           className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
         />
         <span className={`absolute left-4 top-4 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${badgeTone}`}>

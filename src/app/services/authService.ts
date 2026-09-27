@@ -7,7 +7,7 @@ export class AuthService {
     private static async handleResponse<T>(response: Response): Promise<T> {
         const responseText = await response.text();
 
-        let data: any;
+        let data: unknown;
         try {
             data = responseText ? JSON.parse(responseText) : {};
         } catch {
@@ -15,7 +15,8 @@ export class AuthService {
         }
 
         if (!response.ok) {
-            const errorMessage = data.message || data.error || `HTTP Error ${response.status}`;
+            const errorObj = data as { message?: string; error?: string };
+            const errorMessage = errorObj?.message || errorObj?.error || `HTTP Error ${response.status}`;
             const error = new Error(errorMessage) as AuthError;
             error.status = response.status;
             throw error;

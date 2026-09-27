@@ -73,7 +73,7 @@ export function RoomTable({
                                     </td>
                                     <td className="py-3 px-4 font-medium text-gray-900 dark:text-foreground">LKR {room.price.toLocaleString()}</td>
                                     <td className="py-3 px-4 text-gray-600 dark:text-muted-foreground">{room.capacity} Guests</td>
-                                    <td className="py-3 px-4 text-gray-600 dark:text-muted-foreground">Floor {(room as any).floor}</td>
+                                    <td className="py-3 px-4 text-gray-600 dark:text-muted-foreground">Floor {(room as Room & { floor?: number | string }).floor ?? 1}</td>
                                     <td className="py-3 px-4">
                                         <div className="flex items-center justify-center gap-1">
                                             <button onClick={() => onEdit(room)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-secondary transition">

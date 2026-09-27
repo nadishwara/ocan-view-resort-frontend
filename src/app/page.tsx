@@ -1,12 +1,9 @@
 "use client";
 
-import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { Highlights } from "@/components/Highlights";
 import { RoomsServices } from "@/components/RoomsServices";
 import { SpecialOffers } from "@/components/SpecialOffers";
-import { Footer } from "@/components/Footer";
-import { Chatbot } from "@/components/Chatbot";
 import { Toaster } from "sonner";
 
 export default function Home() {
@@ -19,7 +16,7 @@ export default function Home() {
       {/* <Navbar /> */}
 
       {/* Main Page Layout */}
-      <main className="flex-grow">
+      <main className="grow">
         {/* Hero Banner with Quick Search */}
         <Hero />
 

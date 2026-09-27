@@ -45,19 +45,24 @@ export async function POST(request: NextRequest) {
         });
 
         const text = await response.text();
-        let data: any;
+        let data: Record<string, unknown> | null = null;
 
         try {
-            data = text ? JSON.parse(text) : null;
-        } catch (parseError) {
+            data = text ? (JSON.parse(text) as Record<string, unknown>) : null;
+        } catch {
             console.warn('⚠️ Register proxy received non-JSON response:', text);
             data = { message: text || 'Unexpected backend response' };
         }
 
         if (!response.ok) {
             console.log('❌ Register proxy error:', response.status, data);
+            const errorMessage =
+                (typeof data?.message === 'string' && data.message) ||
+                (typeof data?.error === 'string' && data.error) ||
+                'Registration failed';
+
             return NextResponse.json(
-                { message: data?.message || data?.error || 'Registration failed' },
+                { message: errorMessage },
                 { status: response.status }
             );
         }

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { CalendarDays, Users, BedDouble, Sparkles, Check } from "lucide-react";
 import heroImg from "@/assets/hero-resort.jpg";
+import Image from "next/image";
 
 const ROOM_TYPES = ["Deluxe Ocean Room", "Family Suite", "Presidential Villa"] as const;
 const GUEST_OPTIONS = ["1 Adult", "2 Adults", "2 Adults · 1 Child", "Family (4)"] as const;
@@ -60,7 +61,7 @@ export function Hero() {
     setErrors({});
     const nights = Math.round(
       (new Date(result.data.checkOut).getTime() - new Date(result.data.checkIn).getTime()) /
-        86_400_000,
+      86_400_000,
     );
     const ref = "OV-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     setConfirmed({
@@ -83,17 +84,17 @@ export function Hero() {
   }
 
   return (
-    <section id="home" className="relative min-h-[100svh] w-full overflow-hidden">
-      <img
-        src={heroImg.src}
+    <section id="home" className="relative min-h-svh w-full overflow-hidden">
+      <Image
+        src={heroImg}
         alt="OceanView Resort at sunset"
         width={1920}
         height={1280}
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-ocean-deep/40 via-ocean-deep/30 to-ocean-deep/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-ocean-deep/40 via-ocean-deep/30 to-ocean-deep/80" />
 
-      <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-7xl flex-col justify-end px-5 pb-16 pt-32 md:px-10 md:pb-24 md:pt-40">
+      <div className="relative z-10 mx-auto flex min-h-svh max-w-7xl flex-col justify-end px-5 pb-16 pt-32 md:px-10 md:pb-24 md:pt-40">
         <div className="max-w-3xl text-white">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur">
             <Sparkles className="h-3.5 w-3.5 text-gold" />
@@ -185,9 +186,8 @@ function Field({
   return (
     <div className="flex flex-col gap-1">
       <label
-        className={`flex min-w-0 items-center gap-3 rounded-xl border bg-background/60 px-4 py-3 ${
-          error ? "border-destructive" : "border-border"
-        }`}
+        className={`flex min-w-0 items-center gap-3 rounded-xl border bg-background/60 px-4 py-3 ${error ? "border-destructive" : "border-border"
+          }`}
       >
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary">{icon}</span>
         <span className="flex min-w-0 flex-1 flex-col">

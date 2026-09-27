@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Loader2, Wifi, Tv, Snowflake, Coffee, Bath, Home, Car, Utensils, Smartphone, Upload, Bot } from 'lucide-react';
 import axios from 'axios';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { Room } from '@/app/admin/rooms/page';
 
@@ -87,7 +88,7 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                 }));
 
                 toast.success("Image uploaded successfully!");
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("Upload Error:", err);
                 toast.error("Failed to upload image");
             }
@@ -124,9 +125,12 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                 }));
                 toast.success("Description generated successfully!");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("AI Generation Error:", error);
-            const errMsg = error.response?.data?.detail || "Failed to generate description";
+            let errMsg = "Failed to generate description";
+            if (axios.isAxiosError(error) && error.response?.data?.detail) {
+                errMsg = error.response.data.detail;
+            }
             toast.error(errMsg);
         } finally {
             setIsGenerating(false);
@@ -237,7 +241,13 @@ export function RoomFormModal({ isOpen, editingRoom, formData, isSubmitting, onC
                             <div className="flex flex-wrap gap-2 mt-3">
                                 {formData.images.map((imgUrl: string, index: number) => (
                                     <div key={index} className="relative h-16 w-16 rounded-lg overflow-hidden border border-gray-200 group">
-                                        <img src={imgUrl} alt={`Room Image ${index + 1}`} className="h-full w-full object-cover" />
+                                        <Image
+                                            src={imgUrl}
+                                            alt={`Room Image ${index + 1}`}
+                                            fill
+                                            sizes='64px'
+                                            className="h-full w-full object-cover"
+                                        />
                                         <button type="button" onClick={() => removeImage(index)} className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition">
                                             <X className="h-3 w-3" />
                                         </button>

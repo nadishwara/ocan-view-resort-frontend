@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { toast } from 'sonner';
 import { RoomTable } from '../components/rooms/RoomTable';
 import { DeleteModal } from '../components/rooms/DeleteModal';
@@ -28,7 +28,7 @@ export interface Room {
 type ServerRoom = {
   id: number | string;
   roomNumber: string;
-  roomType: String;
+  roomType: string;
   price: number;
   isAvailable?: boolean;
   capacity?: number;
@@ -38,9 +38,9 @@ type ServerRoom = {
   viewType?: string;
   mealPlan?: string;
   cancellationPolicy?: string;
-  amenities?: string[];
+  amenities?: unknown[];
   imageUrls?: string[];
-  images?: any[];
+  images?: unknown[];
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -63,7 +63,9 @@ api.interceptors.request.use((config) => {
         config.headers['Authorization'] = `Bearer ${token}`;
       }
     }
-  } catch (e) { }
+  } catch {
+    // Ignore storage errors
+  }
   return config;
 });
 
@@ -80,8 +82,8 @@ const mapServerToRoom = (sr: ServerRoom): Room => ({
   viewType: sr.viewType ?? '',
   mealPlan: sr.mealPlan ?? '',
   cancellationPolicy: sr.cancellationPolicy ?? '',
-  amenities: sr.amenities?.map((a: any) => String(a)) || [],
-  images: (sr.imageUrls || sr.images || []).map((i: any) => String(i)),
+  amenities: sr.amenities?.map((a) => String(a)) || [],
+  images: (sr.imageUrls || sr.images || []).map((i) => String(i)),
 });
 
 const mapRoomToServer = (r: Partial<Room>) => ({
@@ -110,8 +112,8 @@ const roomApi = {
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [searchTerm] = useState('');
+  const [selectedStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,23 +124,38 @@ export default function RoomsPage() {
 
   const [formData, setFormData] = useState<Partial<Room>>({});
 
-  const fetchRooms = async () => {
-    try {
-      setLoading(true);
-      const response = await roomApi.getAll();
-      const apiRooms = Array.isArray(response.data) ? response.data : [];
-      setRooms(apiRooms.map(mapServerToRoom));
-    } catch (error: any) {
-      const errMsg = error.response?.data?.message || error.message || 'Unknown error';
-      toast.error(`Failed to load rooms: ${errMsg}`);
-      setRooms([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 🟢 Fixed: Fetch Rooms inside useEffect with cleanup flag to avoid set-state warning
   useEffect(() => {
-    void fetchRooms();
+    let isMounted = true;
+
+    const loadRooms = async () => {
+      try {
+        const response = await roomApi.getAll();
+        if (isMounted) {
+          const apiRooms = Array.isArray(response.data) ? response.data : [];
+          setRooms(apiRooms.map(mapServerToRoom));
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          let errMsg = 'Unknown error';
+          if (axios.isAxiosError(error)) {
+            errMsg = (error as AxiosError<{ message?: string }>).response?.data?.message || error.message;
+          }
+          toast.error(`Failed to load rooms: ${errMsg}`);
+          setRooms([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadRooms();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,8 +176,11 @@ export default function RoomsPage() {
       setIsModalOpen(false);
       setEditingRoom(null);
       setFormData({});
-    } catch (error: any) {
-      const errMsg = error.response?.data?.message || error.message || 'Unknown error';
+    } catch (error: unknown) {
+      let errMsg = 'Unknown error';
+      if (axios.isAxiosError(error)) {
+        errMsg = (error as AxiosError<{ message?: string }>).response?.data?.message || error.message;
+      }
       toast.error(`Failed to save room: ${errMsg}`);
     } finally {
       setIsSubmitting(false);
@@ -176,8 +196,11 @@ export default function RoomsPage() {
       toast.success(`Room ${roomToDelete.number} deleted successfully`);
       setIsDeleteModalOpen(false);
       setRoomToDelete(null);
-    } catch (error: any) {
-      const errMsg = error.response?.data?.message || error.message || 'Unknown error';
+    } catch (error: unknown) {
+      let errMsg = 'Unknown error';
+      if (axios.isAxiosError(error)) {
+        errMsg = (error as AxiosError<{ message?: string }>).response?.data?.message || error.message;
+      }
       toast.error(`Failed to delete room: ${errMsg}`);
     } finally {
       setIsSubmitting(false);

@@ -105,14 +105,15 @@ async function getVerifiedPayload(token: string | null): Promise<JWTPayload | nu
 function isAdminRole(payload: JWTPayload | null): boolean {
   if (!payload) return false;
 
-  if ((payload as any).isAdmin === true) return true;
+  const rec = payload as Record<string, unknown>;
+  if (rec.isAdmin === true) return true;
 
   const roles = normalizeRoles(
     payload.roles ??
     payload.authorities ??
     payload.role ??
-    (payload as any).scope ??
-    (payload as any).scp
+    rec.scope ??
+    rec.scp
   );
 
   return roles.some((role) => {

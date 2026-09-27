@@ -21,7 +21,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-    activeTab: propActiveTab,
+    // activeTab: propActiveTab,
     setActiveTab,
     userName = "John Doe",
     memberSince = "January 2024",
@@ -67,11 +67,10 @@ export function Sidebar({
                                 key={item.id}
                                 href={item.href}
                                 onClick={() => setActiveTab?.(item.id)}
-                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                                    isActive
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${isActive
                                         ? "bg-gold/10 text-gold font-semibold shadow-sm"
                                         : "text-gray-600 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-secondary hover:text-gray-900 dark:hover:text-foreground"
-                                }`}
+                                    }`}
                             >
                                 <Icon className="h-4 w-4 shrink-0" /> {item.label}
                             </Link>

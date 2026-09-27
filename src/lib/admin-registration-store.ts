@@ -6,6 +6,9 @@ interface AdminRegistrationState {
 }
 
 const STORE_PATH = path.join(process.cwd(), ".data", "admin-registration.json");
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+    return error instanceof Error && "code" in error;
+}
 
 async function readState(): Promise<AdminRegistrationState> {
     try {
@@ -15,8 +18,8 @@ async function readState(): Promise<AdminRegistrationState> {
         return {
             adminExists: parsed.adminExists === true,
         };
-    } catch (error: any) {
-        if (error?.code === "ENOENT") {
+    } catch (error: unknown) {
+        if (isNodeError(error) && error.code === "ENOENT") {
             return { adminExists: false };
         }
 
