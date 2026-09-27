@@ -86,7 +86,7 @@ export function Hero() {
   return (
     <section id="home" className="relative min-h-svh w-full overflow-hidden">
       <Image
-        src={heroImg.src}
+        src={heroImg}
         alt="OceanView Resort at sunset"
         width={1920}
         height={1280}
