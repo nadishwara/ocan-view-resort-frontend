@@ -13,6 +13,7 @@ import {
     HelpCircle,
     Menu,
     X,
+    MessageCircle,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,14 +31,13 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
 
     return (
         <aside
-            className={`h-full border-r border-gray-200 dark:border-border bg-white dark:bg-card p-5 flex flex-col justify-between shrink-0 transition-all duration-300 relative ${
-                isCollapsed ? "w-20" : "w-64"
-            }`}
+            className={`h-full border-r border-gray-200 dark:border-border bg-white dark:bg-card p-5 flex flex-col justify-between shrink-0 transition-all duration-300 relative ${isCollapsed ? "w-20" : "w-64"
+                }`}
         >
             <div className="space-y-6">
                 {/* Header Section: Logo & Animated Menu Toggle Icon */}
                 <div className={`flex items-center gap-3 font-display text-xl font-bold text-primary ${isCollapsed ? "justify-center" : "justify-between"}`}>
-                    
+
                     {/* Collapsed/Expanded Animation සහිත Hamburger Menu Icon එක */}
                     <button
                         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -88,6 +88,12 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                         href="/admin/guests"
                         isCollapsed={isCollapsed}
                     />
+                    <SidebarItem
+                        icon={<MessageCircle className="h-4 w-4 shrink-0" />}
+                        label="Inquiry Messages"
+                        href="/admin/inquires"
+                        isCollapsed={isCollapsed}
+                    />
                 </nav>
 
                 {/* Bottom Navigation */}
@@ -129,9 +135,8 @@ export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
                 </div>
                 <button
                     onClick={handleLogout}
-                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition ${
-                        isCollapsed ? "justify-center" : ""
-                    }`}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition ${isCollapsed ? "justify-center" : ""
+                        }`}
                 >
                     <LogOut className="h-4 w-4 shrink-0" />
                     {!isCollapsed && "Logout"}
@@ -159,11 +164,10 @@ function SidebarItem({
 }) {
     const content = (
         <div
-            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition relative ${
-                active
-                    ? "bg-gold/10 text-gold"
-                    : "text-gray-600 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-secondary hover:text-gray-900 dark:hover:text-foreground"
-            } ${isCollapsed ? "justify-center" : ""}`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition relative ${active
+                ? "bg-gold/10 text-gold"
+                : "text-gray-600 dark:text-muted-foreground hover:bg-gray-100 dark:hover:bg-secondary hover:text-gray-900 dark:hover:text-foreground"
+                } ${isCollapsed ? "justify-center" : ""}`}
         >
             {icon}
             {!isCollapsed && <span className="flex-1">{label}</span>}
